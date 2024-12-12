@@ -1,0 +1,6 @@
+@Ptcent.Cloud.Drive.Web_HostAddress = http://localhost:5243
+
+GET {{Ptcent.Cloud.Drive.Web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
