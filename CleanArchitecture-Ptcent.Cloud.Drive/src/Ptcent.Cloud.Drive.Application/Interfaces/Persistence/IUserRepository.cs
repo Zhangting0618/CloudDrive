@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ptcent.Cloud.Drive.Infrastructure.IRespository
+namespace Ptcent.Cloud.Drive.Application.Interfaces.Persistence
 {
     public interface IUserRepository : IBaseRepository<UserEntity>
     {

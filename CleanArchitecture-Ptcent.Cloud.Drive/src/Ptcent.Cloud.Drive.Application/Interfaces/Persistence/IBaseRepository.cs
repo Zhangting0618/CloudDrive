@@ -1,21 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Query;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 
-namespace Ptcent.Cloud.Drive.Infrastructure.IRespository
+namespace Ptcent.Cloud.Drive.Application.Interfaces.Persistence
 {
     public interface IBaseRepository<T>
     {
         //IQueryable<SysConfigEntity> GetSysConfigList(Expression<Func<SysConfigEntity, bool>> whereLambda);
         Task<bool> Add(T model);
         Task<int> AddBatch(List<T> list);
-        Task<bool> Update(T model);
+        Task<bool> Update(T model, params Expression<Func<T, object>>[] updatedProperties);
         // Task<int> UpdateBatch(Expression<Func<T, bool>> whereLambda, Expression<Func<T, T>> expression);
-        Task<int> UpdateBatch(Expression<Func<T, bool>> whereLambda, Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> expression);
 
         Task<bool> Delete(T model);
         Task<int> DeleteBatch(Expression<Func<T, bool>> whereLambda);

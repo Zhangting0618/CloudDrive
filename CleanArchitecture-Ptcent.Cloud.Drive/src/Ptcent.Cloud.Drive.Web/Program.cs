@@ -1,60 +1,54 @@
+ï»¿using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using FluentValidation;
+using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.PlatformAbstractions;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Ptcent.Cloud.Drive.Application.Dto.Common;
+using Ptcent.Cloud.Drive.Application.MappingProfiles;
+using Ptcent.Cloud.Drive.Application.PipeLineBehavior;
 using Ptcent.Cloud.Drive.Infrastructure.Context;
+using Ptcent.Cloud.Drive.Infrastructure.Persistence.Interceptors;
 using Ptcent.Cloud.Drive.Shared.Extensions;
+using Ptcent.Cloud.Drive.Shared.RouteUtil;
 using Ptcent.Cloud.Drive.Shared.Util;
+using Ptcent.Cloud.Drive.Web;
 using Ptcent.Cloud.Drive.Web.Filter;
 using Ptcent.Cloud.Drive.Web.Options;
-using System.Text;
-using Ptcent.Cloud.Drive.Application.Dto.Common;
-using Ptcent.Cloud.Drive.Shared.RouteUtil;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Diagnostics;
-using MediatR;
-using Ptcent.Cloud.Drive.Application.PipeLineBehavior;
-using FluentValidation;
-using Autofac;
-using Ptcent.Cloud.Drive.Web;
-using Autofac.Extensions.DependencyInjection;
-using Microsoft.Extensions.PlatformAbstractions;
-using Ptcent.Cloud.Drive.Application.MappingProfiles;
-using Microsoft.AspNetCore.ResponseCompression;
 using System.IO.Compression;
-using Minio;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddJsonFile("Configs/appsettings.json", optional: true, reloadOnChange: true);
-//·ÀÖ¹ÖĞÎÄÂÒÂë
+//é˜²æ­¢ä¸­æ–‡ä¹±ç 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 builder.Services.Configure<IISServerOptions>(options =>
 {
     options.MaxRequestBodySize = int.MaxValue;
 });
-//IIS ÉÏ´«×î´óÖµ
+//IIS ä¸Šä¼ æœ€å¤§å€¼
 builder.Services.Configure<FormOptions>(x =>
 {
 
     x.ValueLengthLimit = int.MaxValue;
     x.MultipartBodyLengthLimit = int.MaxValue;
 });
-var assembly = AppDomain.CurrentDomain.Load("Ptcent.Cloud.Drive.Application");
-builder.Services.AddMediatR(c =>
-{
-    c.RegisterServicesFromAssembly(assembly);
-});
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-builder.Services.AddValidatorsFromAssemblies(Enumerable.Repeat(assembly, 1));
+
 
 
 var snowIdSection = builder.Configuration.GetSection("SnowId");
 
-#region Ñ©»¨ID
+#region é›ªèŠ±ID
 SnowIdOptions snowIdOptions = new SnowIdOptions
 {
     Method = snowIdSection.GetValue<short>("Method"),
@@ -71,7 +65,7 @@ SnowIdOptions snowIdOptions = new SnowIdOptions
 };
 builder.Services.AddIdGenerator(snowIdOptions);
 #endregion
-#region Ñ¹ËõÏìÓ¦ÇëÇó
+#region å‹ç¼©å“åº”è¯·æ±‚
 builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 {
     options.Level = CompressionLevel.Optimal;
@@ -80,7 +74,7 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
     options.Level = CompressionLevel.Optimal;
 }).AddResponseCompression(options =>
 {
-    options.EnableForHttps = true;//ÆôÓÃHttps
+    options.EnableForHttps = true;//å¯ç”¨Https
     options.Providers.Add<BrotliCompressionProvider>();
     options.Providers.Add<GzipCompressionProvider>();
     options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
@@ -94,14 +88,14 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 #endregion
 
 
-#region MinIO×¢Èë
+#region MinIOæ³¨å…¥
 
 #endregion
 
 builder.Services.Configure<ApiBehaviorOptions>(opt => opt.SuppressModelStateInvalidFilter = true);
 builder.Services.AddControllers(options =>
 {
-    //×¢ÈëÈ«¾Ö¹ıÂËÆ÷
+    //æ³¨å…¥å…¨å±€è¿‡æ»¤å™¨
     options.Filters.Add(typeof(PtcentYiDocApiOperationFilter));
     options.Filters.Add(typeof(ExceptionFilterAttribute));
 }).AddJsonOptions(config =>
@@ -132,13 +126,13 @@ builder.Services.AddSwaggerGen(options =>
         options.IncludeXmlComments(item, true);
     }
     options.DocumentFilter<SwaggerEnumFilter>();
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "CloudDrive·şÎñWebApi", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "CloudDriveæœåŠ¡WebApi", Version = "v1" });
     //options.OperationFilter<BinaryPayloadFilter>();
 });
 
 builder.Services.AddSingleton(AutoMapperConfig.GetMapperConfigs());
 
-//¿çÓò
+//è·¨åŸŸ
 builder.Services.AddCors(option => option.AddPolicy("AllowCors", (_builder) =>
 {
     _builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
@@ -156,37 +150,62 @@ builder.Services.AddMvc(opt =>
 });
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
-    //È¡³öË½Ô¿
+    //å–å‡ºç§é’¥
     var secretByte = Encoding.UTF8.GetBytes(builder.Configuration["Authentication:SecretKey"]!);
     options.TokenValidationParameters = new TokenValidationParameters()
     {
-        //ÑéÖ¤·¢²¼Õß
+        //éªŒè¯å‘å¸ƒè€…
         ValidateIssuer = true,
         ValidIssuer = builder.Configuration["Authentication:Issuer"],
-        //ÑéÖ¤½ÓÊÕÕß
+        //éªŒè¯æ¥æ”¶è€…
         ValidateAudience = true,
         ValidAudience = builder.Configuration["Authentication:Audience"],
-        //ÑéÖ¤ÊÇ·ñ¹ıÆÚ
+        //éªŒè¯æ˜¯å¦è¿‡æœŸ
         ValidateLifetime = true,
-        //ÑéÖ¤Ë½Ô¿
+        //éªŒè¯ç§é’¥
         IssuerSigningKey = new SymmetricSecurityKey(secretByte)
     };
 });
 
 var connection = ConfigUtil.GetValue("PtcentYiDocUserWebApiConnection");
 var serverVersion = ServerVersion.AutoDetect(connection);
-builder.Services.AddDbContext<EFDbContext>(options => options.UseMySql(connection, serverVersion));// 
+builder.Services.AddDbContext<EFDbContext>((sp, options) =>
+{
+    // æ•°æ®åº“é…ç½®
+    options.UseMySql(connection, serverVersion);
+
+    // âœ… æ·»åŠ  EntityChangeInterceptor
+    var mediator = sp.GetRequiredService<IMediator>();
+    options.AddInterceptors(new EntityChangeInterceptor(mediator));
+
+    // ä¿ç•™ LazyLoading
+    options.UseLazyLoadingProxies();
+
+    // æ§åˆ¶å°æ‰“å° SQL
+    if (ConfigUtil.GetValue("IsOpenPrintSQL") == "on")
+    {
+        options.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+    }
+});
+
+var assembly = AppDomain.CurrentDomain.Load("Ptcent.Cloud.Drive.Application");
+builder.Services.AddMediatR(c =>
+{
+    c.RegisterServicesFromAssembly(assembly);
+});
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddValidatorsFromAssemblies(Enumerable.Repeat(assembly, 1));
 
 HttpContextUtil.serviceCollection = builder.Services;
 
-//Ìí¼ÓHTTp
-//Autoz×¢Èë
+//æ·»åŠ HTTp
+//Autozæ³¨å…¥
 builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
 builder.Host.ConfigureContainer<ContainerBuilder>(builder =>
 {
     builder.RegisterModule(new AutofacConfig());
 });
-builder.Services.AddRateLimit(builder.Configuration);//×¢²áÏŞÁ÷·şÎñ
+builder.Services.AddRateLimit(builder.Configuration);//æ³¨å†Œé™æµæœåŠ¡
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 builder.Logging.AddLog4Net("Configs/log4net.config");
 
@@ -201,9 +220,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-#region ¿ç Óò
+#region è·¨ åŸŸ
 app.UseCors("AllowCors");
-//app.Urls.Add("http://localhost:9000");
 
 #endregion
 // Configure the HTTP request pipeline.
@@ -212,12 +230,12 @@ app.UseCors("AllowCors");
 
 if (app.Environment.IsDevelopment() || Debugger.IsAttached)
 {
-    //ÆôÓÃÖĞ¼ä¼ş·şÎñÉú³ÉSwagger×÷ÎªJSONÖÕ½áµã
+    //å¯ç”¨ä¸­é—´ä»¶æœåŠ¡ç”ŸæˆSwaggerä½œä¸ºJSONç»ˆç»“ç‚¹
     app.UseSwagger();
-    //ÆôÓÃÖĞ¼ä¼ş·şÎñ¶Ôswagger-ui£¬Ö¸¶¨Swagger JSONÖÕ½áµã
+    //å¯ç”¨ä¸­é—´ä»¶æœåŠ¡å¯¹swagger-uiï¼ŒæŒ‡å®šSwagger JSONç»ˆç»“ç‚¹
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CloudDrive·şÎñWebApi");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CloudDriveæœåŠ¡WebApi");
         c.RoutePrefix = string.Empty;
     });
 }
@@ -244,18 +262,18 @@ if (!Directory.Exists(sourceFilePath))
 }
 // Configure the HTTP request pipeline.
 
-//ÑéÖ¤
-app.UseAuthentication();//ÔÚÇ° ¼øÈ¨
-app.UseAuthorization();//ÔÚºó  ÊÚÈ¨
-app.UseRateLimit();//½Ó¿ÚipÏŞÁ÷ ÖĞ¼ä¼ş
-app.UseResponseCompression();//ÆôÓÃÏìÓ¦Ñ¹ËõÖĞ¼ä¼ş
+//éªŒè¯
+app.UseAuthentication();//åœ¨å‰ é‰´æƒ
+app.UseAuthorization();//åœ¨å  æˆæƒ
+app.UseRateLimit();//æ¥å£ipé™æµ ä¸­é—´ä»¶
+app.UseResponseCompression();//å¯ç”¨å“åº”å‹ç¼©ä¸­é—´ä»¶
 app.Use((context, next) =>
 {
     context.Request.EnableBuffering();
     return next();
 });
 
-//Õâ¸ö ÔÚºó±ß
+//è¿™ä¸ª åœ¨åè¾¹
 app.UseRouting();
 app.Use(async (k, next) =>
 {
@@ -273,5 +291,5 @@ app.MapControllers();
 //{
 //    endpoints.MapControllers();
 //});
-LogUtil.Info($"CloudDrive³ÌĞò¿ªÊ¼Æô¶¯" + DateTime.Now);
+LogUtil.Info($"CloudDriveç¨‹åºå¼€å§‹å¯åŠ¨" + DateTime.Now);
 app.Run();

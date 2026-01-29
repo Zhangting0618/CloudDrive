@@ -43,6 +43,7 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         /// <param name="fileHash"></param>
         /// <returns></returns>
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ResponseMessageDto<bool>> CheckFileHash(string fileHash) =>  await mediator.Send(new CheckFileHashRequestDto { FileHash=fileHash});
         /// <summary>
         /// 分块上传

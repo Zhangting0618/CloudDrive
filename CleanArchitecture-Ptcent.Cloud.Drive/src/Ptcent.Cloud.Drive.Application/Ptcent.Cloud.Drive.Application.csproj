@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ptcent.Cloud.Drive.Domain\Ptcent.Cloud.Drive.Domain.csproj" />
-    <ProjectReference Include="..\Ptcent.Cloud.Drive.Infrastructure\Ptcent.Cloud.Drive.Infrastructure.csproj" />
     <ProjectReference Include="..\Ptcent.Cloud.Drive.Shared\Ptcent.Cloud.Drive.Shared.csproj" />
   </ItemGroup>
 </Project>

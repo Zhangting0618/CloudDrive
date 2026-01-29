@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;

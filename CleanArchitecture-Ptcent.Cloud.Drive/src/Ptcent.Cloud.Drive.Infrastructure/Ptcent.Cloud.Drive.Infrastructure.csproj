@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.1" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0-beta.2" />
@@ -17,6 +18,7 @@
 
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ptcent.Cloud.Drive.Application\Ptcent.Cloud.Drive.Application.csproj" />
     <ProjectReference Include="..\Ptcent.Cloud.Drive.Domain\Ptcent.Cloud.Drive.Domain.csproj" />
     <ProjectReference Include="..\Ptcent.Cloud.Drive.Shared\Ptcent.Cloud.Drive.Shared.csproj" />
   </ItemGroup>

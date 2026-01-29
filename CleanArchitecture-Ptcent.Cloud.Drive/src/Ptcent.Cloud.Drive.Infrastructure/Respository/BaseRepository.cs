@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore;
-using Ptcent.Cloud.Drive.Infrastructure.Context;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
 using System.Linq.Expressions;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
+using Ptcent.Cloud.Drive.Infrastructure.Context;
 
 namespace Ptcent.Cloud.Drive.Infrastructure.Respository
 {
@@ -28,12 +28,26 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Respository
             return await db.SaveChangesAsync();
         }
 
-        public async virtual Task<bool> Update(T model)
+        public async virtual Task<bool> Update(T model, params Expression<Func<T, object>>[] updatedProperties)
         {
-            db.Set<T>().Attach(model);
-            db.Entry(model).State = EntityState.Modified;
+            var dbSet = db.Set<T>();
+            dbSet.Attach(model);
+
+            if (updatedProperties.Length > 0)
+            {
+                foreach (var prop in updatedProperties)
+                {
+                    db.Entry(model).Property(prop).IsModified = true;
+                }
+            }
+            else
+            {
+                db.Entry(model).State = EntityState.Modified;
+            }
+
             return await db.SaveChangesAsync() > 0;
         }
+
 
         //public async virtual Task<int> UpdateBatch(Expression<Func<T, bool>> whereLambda, Expression<Func<T, T>> expression)
         public async virtual Task<int> UpdateBatch(Expression<Func<T, bool>> whereLambda, Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> expression)

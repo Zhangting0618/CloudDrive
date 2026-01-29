@@ -1,19 +1,12 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Domain.Enum;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
 using Ptcent.Cloud.Drive.Shared.Extensions;
 using Ptcent.Cloud.Drive.Shared.Util;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Yitter.IdGenerator;
 
 namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
@@ -137,7 +130,7 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
             if (itemFileFlag)
             {
                 var fileInfo = await fileRepository.GetById(fileId);
-                fileEntitys = (await fileRepository.WhereAsync(a => EF.Functions.Like(a.Idpath, $"{idPath}%") && a.IsDel == (int)FileStatsType.NoDel)).Select(a => new FileEntity
+                fileEntitys = (await fileRepository.GetFilesByPathPrefixAsync(idPath, FileStatsType.NoDel)).Select(a => new FileEntity
                 {
                     Id = a.Id,
                     Idpath = a.Idpath,

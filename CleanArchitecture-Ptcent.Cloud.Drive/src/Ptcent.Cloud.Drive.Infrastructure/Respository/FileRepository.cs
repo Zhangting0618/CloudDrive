@@ -1,13 +1,10 @@
-﻿using Ptcent.Cloud.Drive.Domain.Constants;
+﻿using Microsoft.EntityFrameworkCore;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
+using Ptcent.Cloud.Drive.Domain.Constants;
 using Ptcent.Cloud.Drive.Domain.Entities;
+using Ptcent.Cloud.Drive.Domain.Enum;
 using Ptcent.Cloud.Drive.Infrastructure.Cache;
 using Ptcent.Cloud.Drive.Infrastructure.Context;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ptcent.Cloud.Drive.Infrastructure.Respository
 {
@@ -59,6 +56,18 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Respository
             {
                 return fileEntity;
             }
+        }
+        /// <summary>
+        /// 获取文件列表
+        /// </summary>
+        /// <param name="idPath"></param>
+        /// <param name="stats"></param>
+        /// <returns></returns>
+        public async Task<IQueryable<FileEntity>> GetFilesByPathPrefixAsync(
+       string idPath,
+       FileStatsType stats)
+        {
+            return  (await GetList(f =>EF.Functions.Like(f.Idpath, $"{idPath}%") && f.IsDel == (int)stats));
         }
     }
 }

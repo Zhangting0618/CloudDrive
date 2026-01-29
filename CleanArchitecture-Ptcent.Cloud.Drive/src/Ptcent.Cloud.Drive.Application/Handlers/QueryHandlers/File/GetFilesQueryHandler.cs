@@ -2,17 +2,11 @@
 using MediatR;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
-using Ptcent.Cloud.Drive.Application.MappingProfiles;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Domain.Enum;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
 using Ptcent.Cloud.Drive.Shared.Extensions;
 using Ptcent.Cloud.Drive.Shared.Util;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
 {

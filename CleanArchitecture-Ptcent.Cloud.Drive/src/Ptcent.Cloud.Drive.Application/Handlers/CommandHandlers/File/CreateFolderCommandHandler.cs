@@ -1,10 +1,9 @@
 ﻿using MediatR;
-using Ptcent.Cloud.Drive.Application.Dto.Common;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Domain.Enum;
-using Ptcent.Cloud.Drive.Infrastructure.IRespository;
 using Yitter.IdGenerator;
 
 namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
