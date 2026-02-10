@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc;
-using System.Net;
-using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
-using Ptcent.Cloud.Drive.Shared.Util;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Ptcent.Cloud.Drive.Application.Dto.Common;
+using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
+using Ptcent.Cloud.Drive.Application.ResponseMessageUntil;
+using Ptcent.Cloud.Drive.Shared.Util;
+using System.Net;
 
 namespace Ptcent.Cloud.Drive.Web.Filter
 {
@@ -12,6 +13,13 @@ namespace Ptcent.Cloud.Drive.Web.Filter
     /// </summary>
     public class ExceptionFilterAttribute : IExceptionFilter
     {
+        private readonly IResponseMessageUtil _responseUtil;
+
+        public ExceptionFilterAttribute(IResponseMessageUtil responseUtil)
+        {
+            _responseUtil = responseUtil;
+        }
+
         public void OnException(ExceptionContext context)
         {
             var res = new ResponseMessageDto<dynamic>
@@ -19,29 +27,19 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 Data = null,
                 TotalCount = 0,
                 IsSuccess = false,
-                //Message = string.Format("{0}参数错误或为空", context?.Exception?.Message)
+                Message = context.Exception.Message
             };
-            try
-            {
-                var requestUrl = context.HttpContext.Request.Path.ToString();
-                //Log.Error($"请求异常：{context.Exception}\r\n请求参数：{UtilResponseMessage.GetRequestDataStr()}\r\n用户信息：{UtilResponseMessage.GetCurrentUserDto()?.ToJson()}");
-                LogUtil.Error($"请求异常：路径{requestUrl} {context.Exception}\r\n请求参数：{UtilResponseMessage.GetHttpRequestDataStr()}");
-                // res.Message = "系统繁忙，请稍后再试！";
-                res.Message = context.Exception.Message;
-                context.Result = new ObjectResult(res);
-                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.ExceptionHandled = true;
-            }
-            catch (Exception ex)
-            {
-                var requestUrl = context.HttpContext.Request.Path.ToString();
-                LogUtil.Error($"通用异常处理异常：路径{requestUrl}  {ex}");
-                // res.Message = "系统繁忙，请稍后再试！";
-                res.Message = ex.Message;
-                context.Result = new ObjectResult(res);
-                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.ExceptionHandled = true;
-            }
+
+            var requestUrl = context.HttpContext.Request.Path;
+
+            LogUtil.Error(
+                $"请求异常：路径 {requestUrl}\r\n" +
+                $"请求参数：{_responseUtil.GetHttpRequestDataStr()}\r\n" +
+                $"{context.Exception}");
+
+            context.Result = new ObjectResult(res);
+            context.HttpContext.Response.StatusCode = StatusCodes.Status200OK;
+            context.ExceptionHandled = true;
         }
     }
 }

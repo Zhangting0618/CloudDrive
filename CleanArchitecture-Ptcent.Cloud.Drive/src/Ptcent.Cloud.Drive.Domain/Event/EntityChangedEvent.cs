@@ -10,7 +10,7 @@ namespace Ptcent.Cloud.Drive.Domain.Event
     public record EntityChangedEvent(
         string EntityName,
         object EntityId,
-        ChangeType ChangeType,
+        EntityChangeType ChangeType,
         IReadOnlyDictionary<string, (object OldValue, object NewValue)> Changes
     );
 

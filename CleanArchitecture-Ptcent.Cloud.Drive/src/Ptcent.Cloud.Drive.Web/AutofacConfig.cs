@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Ptcent.Cloud.Drive.Infrastructure.Context;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 
@@ -11,9 +12,17 @@ namespace Ptcent.Cloud.Drive.Web
     {
         protected override void Load(ContainerBuilder builder)
         {
-            var repositories = Assembly.Load("Ptcent.Cloud.Drive.Infrastructure");
-            builder.RegisterAssemblyTypes(repositories).Where(t => t.Name.EndsWith("Repos") || t.Name.EndsWith("Repository")).AsImplementedInterfaces();
-            builder.RegisterType<JwtSecurityTokenHandler>().InstancePerLifetimeScope();
+            var infrastructure = Assembly.Load("Ptcent.Cloud.Drive.Infrastructure");
+
+            builder.RegisterAssemblyTypes(infrastructure)
+                   .Where(t => t.Name.EndsWith("Repos") ||
+                               t.Name.EndsWith("Repository"))
+                   .AsImplementedInterfaces()
+                   .InstancePerLifetimeScope();
+            builder.RegisterType<EFDbContext>()
+                   .AsSelf()
+                   .InstancePerLifetimeScope();
         }
     }
+
 }

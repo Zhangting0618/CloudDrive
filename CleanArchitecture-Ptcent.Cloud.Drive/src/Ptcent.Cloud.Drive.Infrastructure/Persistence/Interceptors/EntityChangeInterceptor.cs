@@ -132,9 +132,9 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Persistence.Interceptors
                 primaryKeyValue!,
                 entry.State switch
                 {
-                    EntityState.Added => ChangeType.Create,
-                    EntityState.Modified => ChangeType.Update,
-                    EntityState.Deleted => ChangeType.Delete,
+                    EntityState.Added => EntityChangeType.Create,
+                    EntityState.Modified => EntityChangeType.Update,
+                    EntityState.Deleted => EntityChangeType.Delete,
                     _ => throw new NotSupportedException()
                 },
                 changes

@@ -1,31 +1,45 @@
 ﻿using JWT.Exceptions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Ptcent.Cloud.Drive.Application.Dto.Common;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
+using Ptcent.Cloud.Drive.Application.ResponseMessageUntil;
+using Ptcent.Cloud.Drive.Domain.Constants;
 using Ptcent.Cloud.Drive.Domain.Enum;
+using Ptcent.Cloud.Drive.Infrastructure.Cache;
 using Ptcent.Cloud.Drive.Shared.Util;
 using Ptcent.Cloud.Drive.Web.Controllers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Ptcent.Cloud.Drive.Infrastructure.Cache;
-using Ptcent.Cloud.Drive.Domain.Constants;
 
 namespace Ptcent.Cloud.Drive.Web.Filter
 {
+    /// <summary>
+    /// 登录过滤器
+    /// </summary>
     public class PtcentYiDocApiOperationFilter : ActionFilterAttribute
     {
         private readonly IConfiguration config;
         private readonly JwtSecurityTokenHandler jwtSecurityTokenHandler;
-        public PtcentYiDocApiOperationFilter(IConfiguration config, JwtSecurityTokenHandler jwtSecurityTokenHandler)
+        private readonly IResponseMessageUtil  responseMessageUtil;
+        private readonly ILogger<PtcentYiDocApiOperationFilter> logger;
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="jwtSecurityTokenHandler"></param>
+        /// <param name="responseMessageUtil"></param>
+        public PtcentYiDocApiOperationFilter(IConfiguration config, JwtSecurityTokenHandler jwtSecurityTokenHandler, IResponseMessageUtil responseMessageUtil, ILogger<PtcentYiDocApiOperationFilter> logger)
         {
             this.config = config;
             this.jwtSecurityTokenHandler = jwtSecurityTokenHandler;
+            this.responseMessageUtil = responseMessageUtil;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -145,7 +159,7 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 var requestUrl = actionContext.HttpContext.Request.Path.ToString();
                 res.Message = "token格式不对";
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{UtilResponseMessage.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
             }
             catch (TokenExpiredException ex)
             {
@@ -153,14 +167,14 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 res.Message = "AuthToken过期";
                 res.Code = WebApiResultCode.NoLogin;
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{UtilResponseMessage.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
             }
             catch (SignatureVerificationException ex)
             {
                 var requestUrl = actionContext.HttpContext.Request.Path.ToString();
                 res.Message = "AuthToken签名无效";
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{UtilResponseMessage.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
             }
             catch (Exception ex)
             {
@@ -168,7 +182,7 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 res.Message = "系统繁忙，请稍后再试！";
                 res.Code = WebApiResultCode.NoLogin;
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{UtilResponseMessage.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
             }
             base.OnActionExecuting(actionContext);
         }

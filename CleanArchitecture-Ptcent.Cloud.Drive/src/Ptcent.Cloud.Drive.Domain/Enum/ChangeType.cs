@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Ptcent.Cloud.Drive.Domain.Enum
 {
-    public enum ChangeType
+    public enum EntityChangeType
     {
         Create,
         Update,
