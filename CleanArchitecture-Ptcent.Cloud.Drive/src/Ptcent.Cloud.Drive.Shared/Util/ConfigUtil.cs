@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,13 +12,15 @@ namespace Ptcent.Cloud.Drive.Shared.Util
         private static IConfiguration config;
         static ConfigUtil()
         {
-            var builder = new ConfigurationBuilder();//创建config的builder
-            builder.SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("Configs/appsettings.json");//设置配置文件所在的路径加载配置文件信息
+            var builder = new ConfigurationBuilder();
+            builder.SetBasePath(Directory.GetCurrentDirectory())
+                   .AddJsonFile("Configs/appsettings.json", optional: false, reloadOnChange: true)
+                   .AddJsonFile($"Configs/appsettings.{System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true, reloadOnChange: true);
             config = builder.Build();
         }
 
         /// <summary>
-        /// 根据key获取对应的配置值
+        /// 根据 key 获取对应的配置值
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
@@ -28,14 +30,13 @@ namespace Ptcent.Cloud.Drive.Shared.Util
         }
 
         /// <summary>
-        /// 获取ConnectionStrings下默认的配置连接字符串
+        /// 获取 ConnectionStrings 下默认的配置连接字符串
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
         public static string GetConnectionString(string key)
         {
-            return config.GetConnectionString(key);
+            return config.GetConnectionString(key) ?? "";
         }
-
     }
 }

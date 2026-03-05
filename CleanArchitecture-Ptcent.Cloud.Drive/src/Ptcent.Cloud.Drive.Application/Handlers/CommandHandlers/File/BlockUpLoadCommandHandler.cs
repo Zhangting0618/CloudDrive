@@ -1,8 +1,8 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Configuration;
+using Ptcent.Cloud.Drive.Application.Contracts.Responses;
 using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
-using Ptcent.Cloud.Drive.Shared.Extensions;
 using Ptcent.Cloud.Drive.Shared.Util;
 using System;
 using System.Collections.Generic;
@@ -42,13 +42,13 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
             {
                 response.IsSuccess = false;
                 response.Data = false;
-                response.Message = $"allowUploadFileType配置节点不存在";
+                response.Message = $"allowUploadFileType 配置节点不存在";
                 return response;
             }
             var allowUploadFileTypes = allowUploadFileType.Split(',').ToList();
             var fileTypes = request.FormFiles.Select(a => Path.GetExtension(a.FileName)).ToList();
-            var excludeFileTypes = allowUploadFileTypes.Intersect(fileTypes).ToList(); 
-            if (!excludeFileTypes.IsNull())
+            var excludeFileTypes = allowUploadFileTypes.Intersect(fileTypes).ToList();
+            if (excludeFileTypes.Count == 0)
             {
                 string excludeFileType = string.Join(",", excludeFileTypes);
                 response.IsSuccess = false;

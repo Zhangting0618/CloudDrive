@@ -1,38 +1,37 @@
-﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Ptcent.Cloud.Drive.Infrastructure.Context;
-using Ptcent.Cloud.Drive.Infrastructure.Persistence.Interceptors;
+using Ptcent.Cloud.Drive.Infrastructure.Persistence;
 
 namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
 {
+    /// <summary>
+    /// 数据库服务扩展
+    /// </summary>
     public static class DatabaseExtensions
     {
         public static IServiceCollection AddDatabase(
             this IServiceCollection services,
             IConfiguration configuration)
         {
-
-
-            var conn = configuration.GetConnectionString(
-                "PtcentYiDocUserWebApiConnection")
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("数据库连接未配置");
 
-            var version = ServerVersion.AutoDetect(conn);
-
-            services.AddDbContext<EFDbContext>((sp, opt) =>
+            services.AddDbContext<AppDbContext>((sp, options) =>
             {
-                opt.UseMySql(conn, version);
+                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mysqlOptions =>
+                {
+                    mysqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null
+                    );
+                    mysqlOptions.CommandTimeout(30);
+                });
 
-                // ⭐ 正确用法
-                var mediator = sp.GetRequiredService<IMediator>();
-                opt.AddInterceptors(
-                    new EntityChangeInterceptor(mediator));
-
-                opt.UseLazyLoadingProxies();
+                // 启用懒加载
+                options.UseLazyLoadingProxies();
             });
 
             return services;
         }
     }
-
 }

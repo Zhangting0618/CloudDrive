@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using MediatR;
 using Ptcent.Cloud.Drive.Application.Events;
-using Ptcent.Cloud.Drive.Application.PipeLineBehavior;
+using Ptcent.Cloud.Drive.Application.PipelineBehaviors;
 
 namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
 {

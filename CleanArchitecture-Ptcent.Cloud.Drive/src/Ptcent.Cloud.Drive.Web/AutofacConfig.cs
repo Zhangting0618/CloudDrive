@@ -1,16 +1,15 @@
-﻿using Autofac;
-using Ptcent.Cloud.Drive.Infrastructure.Context;
-using System.IdentityModel.Tokens.Jwt;
+using Ptcent.Cloud.Drive.Infrastructure.Persistence;
 using System.Reflection;
+using Autofac;
 
 namespace Ptcent.Cloud.Drive.Web
 {
     /// <summary>
     /// 依赖注入
     /// </summary>
-    public class AutofacConfig : Autofac.Module
+    public class AutofacConfig : global::Autofac.Module
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(global::Autofac.ContainerBuilder builder)
         {
             var infrastructure = Assembly.Load("Ptcent.Cloud.Drive.Infrastructure");
 
@@ -19,7 +18,7 @@ namespace Ptcent.Cloud.Drive.Web
                                t.Name.EndsWith("Repository"))
                    .AsImplementedInterfaces()
                    .InstancePerLifetimeScope();
-            builder.RegisterType<EFDbContext>()
+            builder.RegisterType<AppDbContext>()
                    .AsSelf()
                    .InstancePerLifetimeScope();
         }

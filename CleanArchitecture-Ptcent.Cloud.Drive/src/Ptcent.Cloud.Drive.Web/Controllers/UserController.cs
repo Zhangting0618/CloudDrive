@@ -1,120 +1,63 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
-using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
-using Ptcent.Cloud.Drive.Shared.Extensions;
-using Ptcent.Cloud.Drive.Shared.Util;
-using System.Web;
+using Ptcent.Cloud.Drive.Application.Contracts.Requests;
+using Ptcent.Cloud.Drive.Application.Contracts.Responses;
+using Ptcent.Cloud.Drive.Application.Features.Users.Commands;
 
 namespace Ptcent.Cloud.Drive.Web.Controllers
 {
     /// <summary>
-    /// 用户
+    /// 用户管理接口
     /// </summary>
-    public class UserController : BaseController
+    [ApiController]
+    [Route("api/[controller]")]
+    public class UserController : ControllerBase
     {
-        private readonly IConfiguration config;
-        private readonly IMediator mediator;
-        private readonly IHttpClientFactory clientFactory;
-        /// <summary>
-        /// 用户模块
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="mediator"></param>
-        public UserController(IConfiguration config, IMediator mediator, IHttpClientFactory clientFactory) : base(config)
+        private readonly IMediator _mediator;
+
+        public UserController(IMediator mediator)
         {
-            this.config = config;
-            this.mediator = mediator;
-            this.clientFactory = clientFactory;
+            _mediator = mediator;
         }
+
         /// <summary>
-        /// 注册用户
+        /// 用户注册
         /// </summary>
-        /// <param name="registrationAccountRequestDto"></param>
-        /// <returns></returns>
-        [HttpPost]
+        [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<ResponseMessageDto<bool>> RegistrationAccount(RegistrationAccountRequestDto registrationAccountRequestDto)
+        public async Task<ActionResult<ResponseMessageDto<bool>>> Register([FromBody] RegistrationAccountRequestDto request)
         {
-            return await mediator.Send(registrationAccountRequestDto);
+            var command = new RegisterUserCommand(
+                request.UserName,
+                request.Phone,
+                request.PassWord,
+                request.Email,
+                request.Sex
+            );
+            return await _mediator.Send(command);
         }
+
         /// <summary>
-        /// 登录
+        /// 用户登录
         /// </summary>
-        /// <param name="loginUserRequestDto"></param>
-        /// <returns></returns>
-        [HttpPost]
+        [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<ResponseMessageDto<string>> Login(LoginUserRequestDto loginUserRequestDto)
+        public async Task<ActionResult<ResponseMessageDto<string>>> Login([FromBody] LoginUserRequestDto request)
         {
-            return await mediator.Send(loginUserRequestDto);
+            var command = new LoginUserCommand(request.Phone, request.PassWord);
+            return await _mediator.Send(command);
         }
+
         /// <summary>
-        /// 退出
+        /// 用户登出
         /// </summary>
-        /// <param name="userId"></param>
-        /// <returns></returns>
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<ResponseMessageDto<bool>> SignOut(long userId)=>await mediator.Send(new UserQueryRequestDto { UserId = userId });
-        /// <summary>
-        /// 获取微信登录二维码
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GenerateCode()
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<ActionResult<ResponseMessageDto<bool>>> Logout()
         {
-            string sign = Guid.NewGuid().ToString().Replace("-", string.Empty);
-            string callBackUrl = "https://v5698k5455.vicp.fun/cloudapi/User/WxcallBack";
-            callBackUrl= HttpUtility.UrlEncode(callBackUrl);
-            //https://open.weixin.qq.com/connect/oauth2/authorize?appid=APPID&redirect_uri=REDIRECT_URI&response_type=code&scope=SCOPE&state=STATE#wechat_redirec
-            string url = $"https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx0739d9488f396ac8&redirect_uri={callBackUrl}&response_type=code&scope=snsapi_userinfo&state=STATE#wechat_redirect";//微信地址
-          var bytes=  QRCodeUtil.GenerateQrCodeBase64(url);
-            return File(bytes, "image/jpeg");
-        }
-        /// <summary>
-        /// 微信登录验证
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<string> WxCheck()
-        {
-            //string signature = HttpContext.Request.Headers["signature"];
-            string signature = HttpContext.Request.Query["signature"];
-            string timestamp = HttpContext.Request.Query["timestamp"];
-            string nonce = HttpContext.Request.Query["nonce"];
-            string echostr = HttpContext.Request.Query["echostr"];
-            if (echostr.IsNullOrWhiteSpace())
-            {
-                LogUtil.Info("获取微信验证参数为空");
-                //http://localhost:5243/cloudapi/User/WxCheck?signature=43b43101c1549163d2b113e0e20bb8dc3c4eb1df&echostr=355231314065480533&timestamp=1710332181&nonce=166908108
-            }
-            LogUtil.Info("获取微信验证参数:" + echostr);
-            return echostr;
-        }
-        /// <summary>
-        /// 微信回调接口
-        /// </summary>
-        /// <returns></returns>
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task <string> WxcallBack()
-        {
-            string code = HttpContext.Request.Query["code"];
-            string state = HttpContext.Request.Query["state"];
-            LogUtil.Info("WxcallBack:code:" + code + ",state:" + state);
-            var client = clientFactory.CreateClient();
-            //https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code
-            string appID = "wx0739d9488f396ac8";
-            string appsecret = "b81e5f321f4d46fc33767b4232fc1fe3";
-            string getTokenUrl = $"https://api.weixin.qq.com/sns/oauth2/access_token?appid={appID}&secret={appsecret}&code={code}&grant_type=authorization_code";
-           var result=  await  client.GetAsync(getTokenUrl);
-           var s=await result.Content.ReadAsStringAsync();
-            LogUtil.Info(s);
-            return s;
+            // TODO: 实现登出逻辑
+            return Ok(new ResponseMessageDto<bool> { IsSuccess = true, Message = "登出成功" });
         }
     }
 }

@@ -1,61 +1,51 @@
-﻿using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using Ptcent.Cloud.Drive.Application.ResponseMessageUntil;
-using Ptcent.Cloud.Drive.Web;
 using Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection;
-using Ptcent.Cloud.Drive.Web.Filter;
+using Ptcent.Cloud.Drive.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile(
-    "Configs/appsettings.json",
-    optional: true,
-    reloadOnChange: true);
+// ================= 配置 =================
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
 
 // ================= Logging =================
-builder.Logging.ClearProviders(); // 很重要
-builder.Logging.AddLog4Net("Configs/log4net.config");
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
-
-// ================= 基础 =================
-builder.Services.AddEncodingSupport();
+// ================= 基础服务 =================
 builder.Services.AddSnowId(builder.Configuration);
 
-// ================= Web =================
+// ================= Application 层 =================
+builder.Services.AddApplicationServices();
+
+// ================= Infrastructure 层 =================
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// ================= Web API =================
 builder.Services.AddWebApi();
 builder.Services.AddSwaggerSupport();
-builder.Services.AddCompressionSupport();
 builder.Services.AddCorsSupport();
 builder.Services.AddJwtAuth(builder.Configuration);
 
+// ================= HTTP 上下文 =================
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IRequestContext, RequestContext>();
-builder.Services.AddScoped<IResponseMessageUtil, ResponseMessageUtil>();
-
-
-// ================= Infrastructure =================
-builder.Services.AddDatabase(builder.Configuration);
-builder.Services.AddMediatRSupport();
-builder.Services.AddPluginSystem();
-//builder.Services.AddRateLimitSupport(builder.Configuration);   临时注释 报错 还没解决
-
-
-// ================= Autofac =================
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-builder.Host.ConfigureContainer<ContainerBuilder>(c =>
-{
-    c.RegisterModule(new AutofacConfig());
-});
 
 var app = builder.Build();
 
 // ================= Pipeline =================
+app.UseExceptionHandling();
 app.UseSwaggerPipeline();
 app.UseCors("AllowCors");
 app.UseAuthentication();
 app.UseAuthorization();
-//app.UseRateLimit();   临时注释 报错 还没解决
 app.UseResponseCompression();
 app.MapControllers();
+
+// 健康检查端点
+app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
 
 app.Run();

@@ -1,10 +1,10 @@
 ﻿using MediatR;
-using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
+using Ptcent.Cloud.Drive.Application.Contracts.Responses;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
 using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
+using Ptcent.Cloud.Drive.Application.Services;
 using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Domain.Enum;
-using Ptcent.Cloud.Drive.Shared.Extensions;
 using Ptcent.Cloud.Drive.Shared.Util;
 using System.Transactions;
 using Yitter.IdGenerator;
@@ -32,12 +32,12 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
             try
             {
                 var exName = Path.GetExtension(request.FileName);
-                var fileType = CommonExtension.JudgmentFileType(exName);
+                var fileType = FileTypeService.JudgmentFileType(exName);
                 FileEntity fileEntity = new FileEntity();
                 fileEntity.Id = fileId;
                 fileEntity.VersionId = versionId;
                 fileEntity.LeafName = request.FileName;
-                fileEntity.FileType = (int)Enum.Parse(typeof(FileTypeEnum), fileType.ToString());
+                fileEntity.FileType = (int)fileType;
                 fileEntity.Extension = exName;
                 fileEntity.ParentFolderId = request.ParentFloderId == null ? null : request.ParentFloderId;
                 fileEntity.IsFolder = (int)EnumItemType.ItemFile;

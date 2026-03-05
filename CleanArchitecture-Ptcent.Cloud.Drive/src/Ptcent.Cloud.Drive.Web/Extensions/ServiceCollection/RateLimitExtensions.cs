@@ -1,4 +1,4 @@
-﻿using AspNetCoreRateLimit;
+using AspNetCoreRateLimit;
 using AspNetCoreRateLimit.Redis;
 using Ptcent.Cloud.Drive.Web.Filter;
 using StackExchange.Redis;
@@ -25,10 +25,6 @@ namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
 
             services.AddSingleton<IConnectionMultiplexer>(
                 _ => ConnectionMultiplexer.Connect(redisOptions));
-
-            // ⚠️ Redis 必备组件
-          //  services.AddSingleton<IIpPolicyStore, RedisIpPolicyStore>();
-          //  services.AddSingleton<IRateLimitCounterStore, RedisRateLimitCounterStore>();
 
             // ⭐⭐ 核心：Redis 专用 ProcessingStrategy
             services.AddSingleton<IProcessingStrategy, RedisProcessingStrategy>();

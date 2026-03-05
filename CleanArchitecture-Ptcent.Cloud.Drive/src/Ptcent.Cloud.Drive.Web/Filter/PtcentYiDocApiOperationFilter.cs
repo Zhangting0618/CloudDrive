@@ -1,13 +1,12 @@
-﻿using JWT.Exceptions;
+using JWT.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using Ptcent.Cloud.Drive.Application.Contracts.Responses;
 using Ptcent.Cloud.Drive.Application.Dto.Common;
-using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
-using Ptcent.Cloud.Drive.Application.ResponseMessageUntil;
 using Ptcent.Cloud.Drive.Domain.Constants;
 using Ptcent.Cloud.Drive.Domain.Enum;
 using Ptcent.Cloud.Drive.Infrastructure.Cache;
@@ -16,6 +15,7 @@ using Ptcent.Cloud.Drive.Web.Controllers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using WebApiResultCode = Ptcent.Cloud.Drive.Application.Contracts.Responses.WebApiResultCode;
 
 namespace Ptcent.Cloud.Drive.Web.Filter
 {
@@ -26,33 +26,32 @@ namespace Ptcent.Cloud.Drive.Web.Filter
     {
         private readonly IConfiguration config;
         private readonly JwtSecurityTokenHandler jwtSecurityTokenHandler;
-        private readonly IResponseMessageUtil  responseMessageUtil;
         private readonly ILogger<PtcentYiDocApiOperationFilter> logger;
+
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="config"></param>
         /// <param name="jwtSecurityTokenHandler"></param>
-        /// <param name="responseMessageUtil"></param>
-        public PtcentYiDocApiOperationFilter(IConfiguration config, JwtSecurityTokenHandler jwtSecurityTokenHandler, IResponseMessageUtil responseMessageUtil, ILogger<PtcentYiDocApiOperationFilter> logger)
+        /// <param name="logger"></param>
+        public PtcentYiDocApiOperationFilter(IConfiguration config, JwtSecurityTokenHandler jwtSecurityTokenHandler, ILogger<PtcentYiDocApiOperationFilter> logger)
         {
             this.config = config;
             this.jwtSecurityTokenHandler = jwtSecurityTokenHandler;
-            this.responseMessageUtil = responseMessageUtil;
             this.logger = logger;
         }
 
         /// <summary>
-        /// 在过程请求授权时调用。 
+        /// 在过程请求授权时调用。
         /// </summary>
-        /// <param name="actionContext">操作上下文，它封装有关使用 <see cref="T:System.Web.Http.Filters.AuthorizationFilterAttribute"/> 的信息。</param>
+        /// <param name="actionContext">操作上下文</param>
         public override async void OnActionExecuting(ActionExecutingContext actionContext)
         {
             var res = new ResponseMessageDto<dynamic>
             {
                 Data = null,
                 TotalCount = 0,
-                Code = WebApiResultCode.SystemError,
+                Code = (int)WebApiResultCode.SystemError,
                 IsSuccess = false,
             };
             try
@@ -66,7 +65,7 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 }
                 if (!actionContext.HttpContext.Request.Headers.ContainsKey("Source"))
                 {
-                    res.Message = "请求头必须含有source";
+                    res.Message = "请求头必须含有 source";
                     actionContext.Result = new JsonResult(res);
                     base.OnActionExecuting(actionContext);
                     return;
@@ -76,41 +75,22 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 var allowAgree = controllerActionDescriptor.MethodInfo.GetCustomAttributes(typeof(AllowAnonymousAttribute), false).Any();
                 if (!allowAgree)
                 {
-                    //Log.Info($"{DateTime.Now} ,调用方法{actionContext.RouteData.Values["controller"]}/{actionContext.RouteData.Values["action"]},参数：{actionContext.ActionArguments.ToJson()}");             
                     var baseConroller = (BaseController)actionContext.Controller;
                     if (!actionContext.HttpContext.Request.Headers.ContainsKey("AuthToken"))
                     {
-                        res.Message = "请求头需含有AuthToken";
+                        res.Message = "请求头需含有 AuthToken";
                         actionContext.Result = new JsonResult(res);
                         base.OnActionExecuting(actionContext);
                         return;
                     }
                     baseConroller.Source = Convert.ToInt32(actionContext.HttpContext.Request.Headers["Source"]);
-                    //if (baseConroller.Source != (int)Source.PC)
-                    //{
-                    //    res.Message = "请求头source错误";
-                    //    actionContext.Result = new JsonResult(res);
-                    //    base.OnActionExecuting(actionContext);
-                    //    return;
-                    //}
                     if (baseConroller.Source == (int)Source.PC)
                     {
-                        string authToken = string.Empty;
-                        //#if DEBUG
-
-                        //string authKeyJson = new BaseServiceImpl<object>().GetWxTestDebugAuthKeyJson();
-                        //string authJson = authKeyJson.AESEncrypt(ConfigDto.AesKey, ConfigDto.AesIv);
-
-                        //#else
-
-                        authToken = actionContext.HttpContext.Request.Headers["AuthToken"];
-                        //#endif
-                        //Guid userId = Guid.Empty;
+                        string authToken = actionContext.HttpContext.Request.Headers["AuthToken"];
                         LoginUserDto loginUserDto = null;
                         if (!string.IsNullOrEmpty(authToken))
                         {
                             loginUserDto = GetToken(authToken);
-                            //baseConroller.CurrentUserLogintDto = loginUserDto;
                         }
                         if (string.IsNullOrEmpty(authToken) || loginUserDto == null)
                         {
@@ -122,7 +102,7 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                         else
                         {
                             baseConroller.CurrentUserLogintDto = loginUserDto;
-                            //将用户信息存放HttpContext里面  方便取出
+                            //将用户信息存放 HttpContext 里面  方便取出
                             var tokenObj = new JwtSecurityToken(authToken);
                             var claimsIdentity = new ClaimsIdentity(tokenObj.Claims);
                             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
@@ -147,7 +127,7 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                     }
                     else
                     {
-                        res.Message = "请求头source错误";
+                        res.Message = "请求头 source 错误";
                         actionContext.Result = new JsonResult(res);
                         base.OnActionExecuting(actionContext);
                         return;
@@ -157,24 +137,24 @@ namespace Ptcent.Cloud.Drive.Web.Filter
             catch (FormatException ex)
             {
                 var requestUrl = actionContext.HttpContext.Request.Path.ToString();
-                res.Message = "token格式不对";
+                res.Message = "token 格式不对";
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{GetRequestDataStr(actionContext.HttpContext.Request)}");
             }
             catch (TokenExpiredException ex)
             {
                 var requestUrl = actionContext.HttpContext.Request.Path.ToString();
-                res.Message = "AuthToken过期";
+                res.Message = "AuthToken 过期";
                 res.Code = WebApiResultCode.NoLogin;
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{GetRequestDataStr(actionContext.HttpContext.Request)}");
             }
             catch (SignatureVerificationException ex)
             {
                 var requestUrl = actionContext.HttpContext.Request.Path.ToString();
-                res.Message = "AuthToken签名无效";
+                res.Message = "AuthToken 签名无效";
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{GetRequestDataStr(actionContext.HttpContext.Request)}");
             }
             catch (Exception ex)
             {
@@ -182,12 +162,13 @@ namespace Ptcent.Cloud.Drive.Web.Filter
                 res.Message = "系统繁忙，请稍后再试！";
                 res.Code = WebApiResultCode.NoLogin;
                 actionContext.Result = new JsonResult(res);
-                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{responseMessageUtil.GetHttpRequestDataStr()}");
+                LogUtil.Error($"请求接口异常：请求路劲{requestUrl}异常原因{ex}\r\n请求头：{actionContext.HttpContext.Request.Headers.ToJson()}请求参数：{GetRequestDataStr(actionContext.HttpContext.Request)}");
             }
             base.OnActionExecuting(actionContext);
         }
+
         /// <summary>
-        /// 解析Token 
+        /// 解析 Token
         /// </summary>
         /// <param name="tokenStr"></param>
         /// <returns></returns>
@@ -207,6 +188,22 @@ namespace Ptcent.Cloud.Drive.Web.Filter
             IEnumerable<Claim> claims = principal.Claims;
             var loginUserDto = JsonConvert.DeserializeObject<LoginUserDto>(claims.FirstOrDefault().Value);
             return loginUserDto;
+        }
+
+        private string GetRequestDataStr(HttpRequest request)
+        {
+            try
+            {
+                request.EnableBuffering();
+                using var reader = new StreamReader(request.Body, leaveOpen: true);
+                var body = reader.ReadToEndAsync().Result;
+                request.Body.Position = 0;
+                return body;
+            }
+            catch
+            {
+                return Newtonsoft.Json.JsonConvert.SerializeObject(request.Query);
+            }
         }
     }
 }
