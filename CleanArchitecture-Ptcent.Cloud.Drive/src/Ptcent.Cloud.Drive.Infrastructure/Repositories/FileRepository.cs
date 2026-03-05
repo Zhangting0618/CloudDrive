@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Ptcent.Cloud.Drive.Application.Interfaces;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Domain.Entities;
+using Ptcent.Cloud.Drive.Domain.Enum;
 using Ptcent.Cloud.Drive.Infrastructure.Persistence;
 
 namespace Ptcent.Cloud.Drive.Infrastructure.Repositories
@@ -37,6 +39,33 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(f => f.CreatedBy == userId && f.IsDel == 0)
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<FileEntity> SaveFileEntity(FileEntity fileEntity, long userId, bool isSave = false)
+        {
+            if (isSave)
+            {
+                await _dbSet.AddAsync(fileEntity);
+            }
+            else
+            {
+                _dbSet.Update(fileEntity);
+            }
+            await _context.SaveChangesAsync();
+            return fileEntity;
+        }
+
+        public async Task<FileEntity> GetFileCacheByItemId(long fileId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .FirstOrDefaultAsync(f => f.Id == fileId && f.IsDel == 0);
+        }
+
+        public async Task<IQueryable<FileEntity>> GetFilesByPathPrefixAsync(string idPath, FileStatsType stats)
+        {
+            var query = _dbSet.AsNoTracking().Where(f => f.Idpath.StartsWith(idPath) && f.IsDel == 0);
+            return query;
         }
     }
 }

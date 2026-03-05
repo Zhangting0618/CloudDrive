@@ -13,7 +13,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/cloudapi': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5243',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/cloudapi/, '/api')
       }

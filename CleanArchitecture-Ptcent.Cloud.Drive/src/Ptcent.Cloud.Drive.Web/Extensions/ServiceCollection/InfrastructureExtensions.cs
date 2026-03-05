@@ -1,5 +1,6 @@
 using Ptcent.Cloud.Drive.Application.Interfaces;
 using Ptcent.Cloud.Drive.Application.Services;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Infrastructure.Repositories;
 using Ptcent.Cloud.Drive.Infrastructure.Services;
 using StackExchange.Redis;

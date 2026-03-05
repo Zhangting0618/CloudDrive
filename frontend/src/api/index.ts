@@ -25,9 +25,10 @@ request.interceptors.request.use(
   (config) => {
     const userStore = useUserStore()
     const token = userStore.token
+    config.headers.Source = '1'
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      config.headers.Authorization = token
     }
 
     return config

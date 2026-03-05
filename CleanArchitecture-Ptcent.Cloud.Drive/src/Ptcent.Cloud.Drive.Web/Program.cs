@@ -1,4 +1,5 @@
 using Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection;
+using Ptcent.Cloud.Drive.Application.MappingProfiles;
 using Ptcent.Cloud.Drive.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,7 @@ builder.Services.AddSnowId(builder.Configuration);
 
 // ================= Application 层 =================
 builder.Services.AddApplicationServices();
+builder.Services.AddAutoMapper(typeof(AutoMapperConfig).Assembly);
 
 // ================= Infrastructure 层 =================
 builder.Services.AddDatabase(builder.Configuration);
@@ -33,6 +35,7 @@ builder.Services.AddJwtAuth(builder.Configuration);
 
 // ================= HTTP 上下文 =================
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddResponseCompression();
 
 var app = builder.Build();
 

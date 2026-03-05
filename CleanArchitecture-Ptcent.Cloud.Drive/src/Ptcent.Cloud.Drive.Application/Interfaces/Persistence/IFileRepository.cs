@@ -1,4 +1,5 @@
-﻿using Ptcent.Cloud.Drive.Domain.Entities;
+using Ptcent.Cloud.Drive.Application.Interfaces;
+using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Domain.Enum;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Ptcent.Cloud.Drive.Application.Interfaces.Persistence
 {
-    public interface IFileRepository : IBaseRepository<FileEntity>
+    public interface IFileRepository : IRepository<FileEntity>
     {
         Task<FileEntity> SaveFileEntity(FileEntity fileEntity, long userId, bool isSave = false);
         /// <summary>

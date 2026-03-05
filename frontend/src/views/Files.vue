@@ -154,7 +154,7 @@ import {
   Folder,
   Picture,
   Document,
-  Office,
+  
   VideoCamera,
   Files,
   UploadFilled,
@@ -192,7 +192,7 @@ const loadFiles = async () => {
     const res = await getFileList({
       parentFolderId: fileStore.currentFolderId,
     })
-    files.value = res.data || []
+    files.value = res.data?.data || []
   } catch (error: any) {
     ElMessage.error(error.message || '加载文件列表失败')
   } finally {
@@ -367,8 +367,8 @@ const getFileIcon = (row: FileItem) => {
   const ext = row.extension?.toLowerCase()
   if (['.jpg', '.jpeg', '.png', '.gif', '.bmp'].includes(ext)) return Picture
   if (['.pdf', '.doc', '.docx', '.txt'].includes(ext)) return Document
-  if (['.xls', '.xlsx'].includes(ext)) return Office
-  if (['.ppt', '.pptx'].includes(ext)) return Office
+  if (['.xls', '.xlsx'].includes(ext)) return Document
+  if (['.ppt', '.pptx'].includes(ext)) return Document
   if (['.mp4', '.avi', '.mov'].includes(ext)) return VideoCamera
   if (['.zip', '.rar', '.7z'].includes(ext)) return Files
 

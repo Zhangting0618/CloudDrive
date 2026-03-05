@@ -1,4 +1,5 @@
-﻿using Ptcent.Cloud.Drive.Domain.Entities;
+using Ptcent.Cloud.Drive.Application.Interfaces;
+using Ptcent.Cloud.Drive.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace Ptcent.Cloud.Drive.Application.Interfaces.Persistence
 {
-    public interface IUserRepository : IBaseRepository<UserEntity>
+    public interface IUserRepository : IRepository<UserEntity>
     {
         /// <summary>
-        /// 获取用户Id
+        /// 获取用户 Id
         /// </summary>
         /// <returns></returns>
         Task<long> UserId();

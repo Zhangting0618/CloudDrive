@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Ptcent.Cloud.Drive.Application.Contracts.Responses;
 using Ptcent.Cloud.Drive.Application.Interfaces;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Application.Services;
 using Ptcent.Cloud.Drive.Domain.Constants;
 

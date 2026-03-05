@@ -14,8 +14,8 @@ namespace Ptcent.Cloud.Drive.Shared.Util
         {
             var builder = new ConfigurationBuilder();
             builder.SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("Configs/appsettings.json", optional: false, reloadOnChange: true)
-                   .AddJsonFile($"Configs/appsettings.{System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true, reloadOnChange: true);
+                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                   .AddJsonFile($"appsettings.{System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true, reloadOnChange: true);
             config = builder.Build();
         }
 

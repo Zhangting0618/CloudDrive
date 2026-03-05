@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElForm, ElFormItem, ElInput, ElButton, type FormInstance, type FormRules } from 'element-plus'
+import { ElForm, ElFormItem, ElInput, ElButton, ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
