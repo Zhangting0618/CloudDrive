@@ -21,6 +21,13 @@
         </el-button>
         <el-button
           v-if="fileStore.hasSelection"
+          @click="showMoveDialog = true"
+        >
+          <el-icon><FolderAdd /></el-icon>
+          移动到
+        </el-button>
+        <el-button
+          v-if="fileStore.hasSelection"
           type="danger"
           @click="handleBatchDelete"
         >
@@ -138,11 +145,31 @@
         <el-button type="primary" @click="confirmRename">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 移动对话框 -->
+    <el-dialog
+      v-model="showMoveDialog"
+      title="移动到文件夹"
+      width="400px"
+    >
+      <el-tree
+        ref="folderTreeRef"
+        :data="folderTreeData"
+        :props="{ label: 'name', children: 'children', disabled: isNotFolder }"
+        default-expand-all
+        highlight-current
+        @node-click="handleFolderNodeClick"
+      />
+      <template #footer>
+        <el-button @click="showMoveDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmMove">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   HomeFilled,
@@ -154,10 +181,10 @@ import {
   Folder,
   Picture,
   Document,
-  
   VideoCamera,
   Files,
   UploadFilled,
+  OfficeBuilding,
 } from '@element-plus/icons-vue'
 import { useFileStore } from '@/stores/file'
 import {
@@ -166,6 +193,7 @@ import {
   createFolder,
   deleteFile,
   renameFile,
+  moveFile,
   downloadFile,
   batchDownload,
   type FileItem,
@@ -181,9 +209,12 @@ const files = ref<FileItem[]>([])
 const showUploadDialog = ref(false)
 const showFolderDialog = ref(false)
 const showRenameDialog = ref(false)
+const showMoveDialog = ref(false)
 const newFolderName = ref('')
 const renameValue = ref('')
 const currentRenameFile = ref<FileItem | null>(null)
+const selectedMoveFolderId = ref<number | undefined>(undefined)
+const folderTreeData = ref<any[]>([])
 
 // 加载文件列表
 const loadFiles = async () => {
@@ -320,16 +351,91 @@ const handleDelete = (row: FileItem) => {
 }
 
 // 批量删除
-const handleBatchDelete = () => {
-  ElMessageBox.confirm(`确定要删除选中的 ${fileStore.selectedFileIds.length} 个文件吗？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(async () => {
-    // TODO: 实现批量删除
+const handleBatchDelete = async () => {
+  try {
+    const promises = fileStore.selectedFileIds.map(id => deleteFile(id))
+    await Promise.all(promises)
     ElMessage.success('删除成功')
+    fileStore.clearSelection()
     loadFiles()
+  } catch (error: any) {
+    ElMessage.error(error.message || '删除失败')
+  }
+}
+
+// 移动相关
+const isNotFolder = (data: any) => !data.isFolder
+
+const handleFolderNodeClick = (node: any) => {
+  if (node.isFolder) {
+    selectedMoveFolderId.value = node.id
+  }
+}
+
+// 加载文件夹树
+const loadFolderTree = async () => {
+  try {
+    const res = await getFileList({})
+    const allFiles = res.data?.data || []
+    folderTreeData.value = buildFolderTree(allFiles)
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载文件夹失败')
+  }
+}
+
+// 构建文件夹树形结构
+const buildFolderTree = (files: FileItem[]): any[] => {
+  const folders = files.filter(f => f.isFolder)
+  const root: any[] = []
+  const folderMap = new Map<number, any>()
+
+  // 根节点（顶级）
+  root.push({
+    id: undefined,
+    name: '根目录',
+    isFolder: true,
+    children: [],
   })
+
+  // 先创建所有文件夹节点
+  folders.forEach(folder => {
+    folderMap.set(folder.id, {
+      id: folder.id,
+      name: folder.name,
+      isFolder: true,
+      children: [],
+    })
+  })
+
+  // 构建树形结构
+  folders.forEach(folder => {
+    const node = folderMap.get(folder.id)
+    // 查找父节点（简单处理：假设都在根目录）
+    root[0].children.push(node)
+  })
+
+  return root
+}
+
+// 确认移动
+const confirmMove = async () => {
+  if (selectedMoveFolderId.value === undefined) {
+    ElMessage.warning('请选择目标文件夹')
+    return
+  }
+
+  try {
+    const promises = fileStore.selectedFileIds.map(id =>
+      moveFile(id, selectedMoveFolderId.value!)
+    )
+    await Promise.all(promises)
+    ElMessage.success('移动成功')
+    showMoveDialog.value = false
+    fileStore.clearSelection()
+    loadFiles()
+  } catch (error: any) {
+    ElMessage.error(error.message || '移动失败')
+  }
 }
 
 // 下载
@@ -389,6 +495,13 @@ const getFileIconColor = (row: FileItem) => {
 
   return '#868e96'
 }
+
+// 监听移动对话框打开时加载文件夹树
+watch(showMoveDialog, (newVal) => {
+  if (newVal) {
+    loadFolderTree()
+  }
+})
 
 onMounted(() => {
   loadFiles()

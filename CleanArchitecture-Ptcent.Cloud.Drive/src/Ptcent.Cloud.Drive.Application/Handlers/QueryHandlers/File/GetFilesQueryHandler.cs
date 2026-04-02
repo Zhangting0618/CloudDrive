@@ -50,9 +50,10 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
                 }
                 else if (!string.IsNullOrWhiteSpace(keyword))
                 {
+                    // 优化搜索：支持文件名和扩展名搜索
                     where = a => a.IsDel == (int)FileStatsType.NoDel
                         && a.ParentFolderId == parentFolderId
-                        && a.LeafName.Contains(keyword);
+                        && (a.LeafName.Contains(keyword) || (a.Extension != null && a.Extension.Contains(keyword)));
                 }
                 else
                 {
@@ -67,25 +68,23 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
                 if (request.FileType != FileTypeEnum.All && !string.IsNullOrWhiteSpace(keyword))
                 {
                     where = a => a.IsDel == (int)FileStatsType.NoDel
-                        && a.ParentFolderId == null
                         && a.FileType == fileType
                         && a.LeafName.Contains(keyword);
                 }
                 else if (request.FileType != FileTypeEnum.All)
                 {
                     where = a => a.IsDel == (int)FileStatsType.NoDel
-                        && a.ParentFolderId == null
                         && a.FileType == fileType;
                 }
                 else if (!string.IsNullOrWhiteSpace(keyword))
                 {
+                    // 优化搜索：支持文件名和扩展名搜索，全局搜索
                     where = a => a.IsDel == (int)FileStatsType.NoDel
-                        && a.ParentFolderId == null
-                        && a.LeafName.Contains(keyword);
+                        && (a.LeafName.Contains(keyword) || (a.Extension != null && a.Extension.Contains(keyword)));
                 }
                 else
                 {
-                    where = a => a.IsDel == (int)FileStatsType.NoDel && a.ParentFolderId == null;
+                    where = a => a.IsDel == (int)FileStatsType.NoDel;
                 }
             }
 

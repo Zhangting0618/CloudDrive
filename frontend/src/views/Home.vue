@@ -12,14 +12,18 @@
           <el-icon><Folder /></el-icon>
           <span>全部文件</span>
         </router-link>
-        <div class="nav-item">
-          <el-icon><Star /></el-icon>
-          <span>我的收藏</span>
-        </div>
-        <div class="nav-item">
+        <router-link to="/recycle" class="nav-item" active-class="active">
           <el-icon><Delete /></el-icon>
           <span>回收站</span>
-        </div>
+        </router-link>
+        <router-link to="/collection" class="nav-item" active-class="active">
+          <el-icon><Star /></el-icon>
+          <span>我的收藏</span>
+        </router-link>
+        <router-link to="/share" class="nav-item" active-class="active">
+          <el-icon><Link /></el-icon>
+          <span>我的分享</span>
+        </router-link>
       </nav>
 
       <div class="user-info">
@@ -31,7 +35,8 @@
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              <el-dropdown-item command="settings">个人设置</el-dropdown-item>
+              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -56,13 +61,16 @@ import {
   Delete,
   UserFilled,
   ArrowDown,
+  Link,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const handleCommand = (command: string) => {
-  if (command === 'logout') {
+  if (command === 'settings') {
+    router.push('/settings')
+  } else if (command === 'logout') {
     userStore.logoutAction()
     ElMessage.success('已退出登录')
     router.push('/login')

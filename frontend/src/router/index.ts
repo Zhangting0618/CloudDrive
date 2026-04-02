@@ -26,6 +26,36 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/recycle',
+    name: 'RecycleBin',
+    component: () => import('@/views/RecycleBin.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/collection',
+    name: 'Collection',
+    component: () => import('@/views/Collection.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/share',
+    name: 'Share',
+    component: () => import('@/views/Share.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/s/:shareCode',
+    name: 'SharePublic',
+    component: () => import('@/views/SharePublic.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/settings',
+    name: 'UserSettings',
+    component: () => import('@/views/UserSettings.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/preview/:fileId',
     name: 'Preview',
     component: () => import('@/views/Preview.vue'),
