@@ -38,5 +38,20 @@ namespace Ptcent.Cloud.Drive.Application.Interfaces
         Task<bool> Any(Expression<Func<T, bool>> @where);
         Task<IQueryable<T>> WhereAsync(Expression<Func<T, bool>> @where);
         Task<IQueryable<T>> WhereAsync();
+
+        /// <summary>
+        /// 独立提交 - 新增实体并立即提交，不受外层事务影响
+        /// </summary>
+        Task<bool> AddIndependentAsync(T entity, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 独立提交 - 更新实体并立即提交，不受外层事务影响
+        /// </summary>
+        Task<bool> UpdateIndependentAsync(T entity, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// 独立提交 - 删除实体并立即提交，不受外层事务影响
+        /// </summary>
+        Task<bool> DeleteIndependentAsync(T entity, CancellationToken cancellationToken = default);
     }
 }

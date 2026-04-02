@@ -262,5 +262,94 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Repositories
         {
             return Task.FromResult(_dbSet.AsNoTracking().AsQueryable());
         }
+
+        /// <summary>
+        /// 独立提交 - 新增实体并立即提交，不受外层事务影响
+        /// 用于日志、审计等需要保证数据不丢失的场景
+        /// </summary>
+        public virtual async Task<bool> AddIndependentAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            await _dbSet.AddAsync(entity, cancellationToken);
+
+            // 如果当前有活动事务，使用独立提交方式
+            if (_context.Database.CurrentTransaction != null)
+            {
+                // 创建一个新事务来提交这个操作
+                using var independentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var result = await _context.SaveChangesAsync(cancellationToken);
+                    await independentTransaction.CommitAsync(cancellationToken);
+                    return result > 0;
+                }
+                catch
+                {
+                    await independentTransaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            }
+            else
+            {
+                // 没有事务，直接保存
+                return await _context.SaveChangesAsync(cancellationToken) > 0;
+            }
+        }
+
+        /// <summary>
+        /// 独立提交 - 更新实体并立即提交，不受外层事务影响
+        /// </summary>
+        public virtual async Task<bool> UpdateIndependentAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            _dbSet.Attach(entity);
+            _context.Entry(entity).State = EntityState.Modified;
+
+            if (_context.Database.CurrentTransaction != null)
+            {
+                using var independentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var result = await _context.SaveChangesAsync(cancellationToken);
+                    await independentTransaction.CommitAsync(cancellationToken);
+                    return result > 0;
+                }
+                catch
+                {
+                    await independentTransaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            }
+            else
+            {
+                return await _context.SaveChangesAsync(cancellationToken) > 0;
+            }
+        }
+
+        /// <summary>
+        /// 独立提交 - 删除实体并立即提交，不受外层事务影响
+        /// </summary>
+        public virtual async Task<bool> DeleteIndependentAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            _dbSet.Remove(entity);
+
+            if (_context.Database.CurrentTransaction != null)
+            {
+                using var independentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                try
+                {
+                    var result = await _context.SaveChangesAsync(cancellationToken);
+                    await independentTransaction.CommitAsync(cancellationToken);
+                    return result > 0;
+                }
+                catch
+                {
+                    await independentTransaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            }
+            else
+            {
+                return await _context.SaveChangesAsync(cancellationToken) > 0;
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Ptcent.Cloud.Drive.Application.Interfaces;
 using Ptcent.Cloud.Drive.Infrastructure.Persistence;
+using Ptcent.Cloud.Drive.Infrastructure.Persistence.Interceptors;
 
 namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
 {
@@ -15,6 +17,10 @@ namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
             var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("数据库连接未配置");
 
+            // 注册拦截器
+            var independentSubmitInterceptor = new IndependentSubmitInterceptor();
+            services.AddSingleton(independentSubmitInterceptor);
+
             services.AddDbContext<AppDbContext>((sp, options) =>
             {
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mysqlOptions =>
@@ -29,7 +35,13 @@ namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
 
                 // 启用懒加载
                 options.UseLazyLoadingProxies();
+
+                // 添加拦截器
+                options.AddInterceptors(sp.GetRequiredService<IndependentSubmitInterceptor>());
             });
+
+            // 注册工作单元
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             return services;
         }
