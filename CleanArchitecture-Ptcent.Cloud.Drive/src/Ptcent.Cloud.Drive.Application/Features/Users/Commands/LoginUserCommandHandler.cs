@@ -46,6 +46,14 @@ namespace Ptcent.Cloud.Drive.Application.Features.Users.Commands
                 return response;
             }
 
+            if (user.IsDel == (int)Ptcent.Cloud.Drive.Domain.Enum.UserStatus.Quit)
+            {
+                response.IsSuccess = false;
+                response.Code = WebApiResultCode.Forbidden;
+                response.Message = "用户已被禁用";
+                return response;
+            }
+
             // 验证密码
             var isValid = _passwordHasher.VerifyPassword(request.Password, user.Salt!, user.Password);
             if (!isValid)
@@ -61,7 +69,8 @@ namespace Ptcent.Cloud.Drive.Application.Features.Users.Commands
                 user.Id.ToString(),
                 user.UserName,
                 user.Phone,
-                user.Email ?? string.Empty
+                user.Email ?? string.Empty,
+                user.UserType ?? (int)Ptcent.Cloud.Drive.Domain.Enum.UserType.OrdinaryUsers
             );
 
             // 缓存用户信息

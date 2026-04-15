@@ -6,8 +6,10 @@ namespace Ptcent.Cloud.Drive.Domain.Constants
     public static class CacheKeys
     {
         public const string UserSession = "user:session:{0}";
+        public const string UserTokenBlacklist = "user:token:blacklist:{0}";
         public const string FileMetadata = "file:metadata:{0}";
         public const string FileToken = "file:token:{0}";
+        public const string ShareAccessToken = "share:access:{0}:{1}";
         public const string UploadChunk = "upload:chunk:{0}:{1}";
         public const string UserQuota = "user:quota:{0}";
     }
@@ -18,8 +20,10 @@ namespace Ptcent.Cloud.Drive.Domain.Constants
     public static class CacheExpiration
     {
         public static readonly TimeSpan UserSession = TimeSpan.FromDays(30);
+        public static readonly TimeSpan UserTokenBlacklist = TimeSpan.FromDays(30);
         public static readonly TimeSpan FileMetadata = TimeSpan.FromHours(1);
         public static readonly TimeSpan FileToken = TimeSpan.FromMinutes(30);
+        public static readonly TimeSpan ShareAccessToken = TimeSpan.FromMinutes(30);
         public static readonly TimeSpan UploadChunk = TimeSpan.FromHours(24);
         public static readonly TimeSpan UserQuota = TimeSpan.FromMinutes(5);
     }

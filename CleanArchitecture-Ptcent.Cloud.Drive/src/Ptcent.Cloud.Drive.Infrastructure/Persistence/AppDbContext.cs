@@ -41,5 +41,8 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Persistence
 
         public virtual DbSet<UserEntity> Users { get; set; } = null!;
         public virtual DbSet<FileEntity> Files { get; set; } = null!;
+        public virtual DbSet<ShareEntity> Shares { get; set; } = null!;
+        public virtual DbSet<CollectionEntity> Collections { get; set; } = null!;
+        public virtual DbSet<OperationLogEntity> OperationLogs { get; set; } = null!;
     }
 }

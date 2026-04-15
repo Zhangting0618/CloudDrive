@@ -21,10 +21,17 @@
         </el-button>
         <el-button
           v-if="fileStore.hasSelection"
-          @click="showMoveDialog = true"
+          @click="openTargetDialog('move')"
         >
           <el-icon><FolderAdd /></el-icon>
           移动到
+        </el-button>
+        <el-button
+          v-if="fileStore.hasSelection"
+          @click="openTargetDialog('copy')"
+        >
+          <el-icon><CopyDocument /></el-icon>
+          复制到
         </el-button>
         <el-button
           v-if="fileStore.hasSelection"
@@ -73,13 +80,16 @@
             {{ formatDate(row.createdDate) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleDownload(row)">
               下载
             </el-button>
             <el-button link type="primary" @click="handleRename(row)">
               重命名
+            </el-button>
+            <el-button link type="primary" @click="handleSingleCopy(row)">
+              复制
             </el-button>
             <el-button link type="danger" @click="handleDelete(row)">
               删除
@@ -146,10 +156,10 @@
       </template>
     </el-dialog>
 
-    <!-- 移动对话框 -->
+    <!-- 目标文件夹对话框 -->
     <el-dialog
-      v-model="showMoveDialog"
-      title="移动到文件夹"
+      v-model="showTargetDialog"
+      :title="targetDialogTitle"
       width="400px"
     >
       <el-tree
@@ -161,15 +171,15 @@
         @node-click="handleFolderNodeClick"
       />
       <template #footer>
-        <el-button @click="showMoveDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmMove">确定</el-button>
+        <el-button @click="showTargetDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmTargetAction">确定</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   HomeFilled,
@@ -183,11 +193,12 @@ import {
   Document,
   VideoCamera,
   Files,
+  CopyDocument,
   UploadFilled,
-  OfficeBuilding,
 } from '@element-plus/icons-vue'
 import { useFileStore } from '@/stores/file'
 import {
+  copyFile,
   getFileList,
   uploadFile,
   createFolder,
@@ -209,12 +220,24 @@ const files = ref<FileItem[]>([])
 const showUploadDialog = ref(false)
 const showFolderDialog = ref(false)
 const showRenameDialog = ref(false)
-const showMoveDialog = ref(false)
+const showTargetDialog = ref(false)
 const newFolderName = ref('')
 const renameValue = ref('')
 const currentRenameFile = ref<FileItem | null>(null)
-const selectedMoveFolderId = ref<number | undefined>(undefined)
-const folderTreeData = ref<any[]>([])
+const selectedTargetFolderId = ref<number | null>(null)
+const folderTreeData = ref<FolderTreeNode[]>([])
+const targetAction = ref<'move' | 'copy'>('move')
+
+interface FolderTreeNode {
+  id: number
+  name: string
+  isFolder: boolean
+  parentFolderId: number | null
+  targetParentFolderId: number | null
+  children: FolderTreeNode[]
+}
+
+const targetDialogTitle = computed(() => targetAction.value === 'copy' ? '复制到文件夹' : '移动到文件夹')
 
 // 加载文件列表
 const loadFiles = async () => {
@@ -363,19 +386,31 @@ const handleBatchDelete = async () => {
   }
 }
 
-// 移动相关
+// 目标文件夹相关
 const isNotFolder = (data: any) => !data.isFolder
 
-const handleFolderNodeClick = (node: any) => {
+const handleFolderNodeClick = (node: FolderTreeNode) => {
   if (node.isFolder) {
-    selectedMoveFolderId.value = node.id
+    selectedTargetFolderId.value = node.targetParentFolderId
   }
+}
+
+const openTargetDialog = (action: 'move' | 'copy') => {
+  targetAction.value = action
+  selectedTargetFolderId.value = fileStore.currentFolderId ?? null
+  showTargetDialog.value = true
+}
+
+const handleSingleCopy = (row: FileItem) => {
+  fileStore.clearSelection()
+  fileStore.selectFile(row.id)
+  openTargetDialog('copy')
 }
 
 // 加载文件夹树
 const loadFolderTree = async () => {
   try {
-    const res = await getFileList({})
+    const res = await getFileList({ pageSize: 1000 })
     const allFiles = res.data?.data || []
     folderTreeData.value = buildFolderTree(allFiles)
   } catch (error: any) {
@@ -384,18 +419,17 @@ const loadFolderTree = async () => {
 }
 
 // 构建文件夹树形结构
-const buildFolderTree = (files: FileItem[]): any[] => {
+const buildFolderTree = (files: FileItem[]): FolderTreeNode[] => {
   const folders = files.filter(f => f.isFolder)
-  const root: any[] = []
-  const folderMap = new Map<number, any>()
-
-  // 根节点（顶级）
-  root.push({
-    id: undefined,
+  const rootNode: FolderTreeNode = {
+    id: 0,
     name: '根目录',
     isFolder: true,
+    parentFolderId: null,
+    targetParentFolderId: null,
     children: [],
-  })
+  }
+  const folderMap = new Map<number, FolderTreeNode>()
 
   // 先创建所有文件夹节点
   folders.forEach(folder => {
@@ -403,6 +437,8 @@ const buildFolderTree = (files: FileItem[]): any[] => {
       id: folder.id,
       name: folder.name,
       isFolder: true,
+      parentFolderId: folder.parentFolderId ?? null,
+      targetParentFolderId: folder.id,
       children: [],
     })
   })
@@ -410,31 +446,43 @@ const buildFolderTree = (files: FileItem[]): any[] => {
   // 构建树形结构
   folders.forEach(folder => {
     const node = folderMap.get(folder.id)
-    // 查找父节点（简单处理：假设都在根目录）
-    root[0].children.push(node)
+    if (!node) {
+      return
+    }
+
+    const parentId = folder.parentFolderId ?? null
+    if (parentId !== null && folderMap.has(parentId)) {
+      folderMap.get(parentId)!.children.push(node)
+    } else {
+      rootNode.children.push(node)
+    }
   })
 
-  return root
-}
-
-// 确认移动
-const confirmMove = async () => {
-  if (selectedMoveFolderId.value === undefined) {
-    ElMessage.warning('请选择目标文件夹')
-    return
+  const sortTree = (nodes: FolderTreeNode[]) => {
+    nodes.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    nodes.forEach(node => sortTree(node.children))
   }
 
+  sortTree(rootNode.children)
+  return [rootNode]
+}
+
+// 确认目标操作
+const confirmTargetAction = async () => {
   try {
-    const promises = fileStore.selectedFileIds.map(id =>
-      moveFile(id, selectedMoveFolderId.value!)
-    )
+    const action = targetAction.value === 'copy'
+      ? (id: number) => copyFile(id, selectedTargetFolderId.value)
+      : (id: number) => moveFile(id, selectedTargetFolderId.value)
+
+    const promises = fileStore.selectedFileIds.map(id => action(id))
     await Promise.all(promises)
-    ElMessage.success('移动成功')
-    showMoveDialog.value = false
+
+    ElMessage.success(targetAction.value === 'copy' ? '复制成功' : '移动成功')
+    showTargetDialog.value = false
     fileStore.clearSelection()
     loadFiles()
   } catch (error: any) {
-    ElMessage.error(error.message || '移动失败')
+    ElMessage.error(error.message || (targetAction.value === 'copy' ? '复制失败' : '移动失败'))
   }
 }
 
@@ -496,8 +544,8 @@ const getFileIconColor = (row: FileItem) => {
   return '#868e96'
 }
 
-// 监听移动对话框打开时加载文件夹树
-watch(showMoveDialog, (newVal) => {
+// 监听目标对话框打开时加载文件夹树
+watch(showTargetDialog, (newVal) => {
   if (newVal) {
     loadFolderTree()
   }

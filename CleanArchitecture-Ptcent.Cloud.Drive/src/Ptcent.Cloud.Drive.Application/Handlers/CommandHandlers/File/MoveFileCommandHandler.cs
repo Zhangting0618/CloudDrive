@@ -42,26 +42,37 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
                 }
 
                 // 2. 获取目标文件夹
-                var targetFolder = await _fileRepository.GetByIdAsync(request.NewParentFolderId, cancellationToken);
-                if (targetFolder == null || targetFolder.IsFolder != 1 || targetFolder.IsDel == (int)FileStatsType.Del)
+                Ptcent.Cloud.Drive.Domain.Entities.FileEntity? targetFolder = null;
+                if (request.NewParentFolderId.HasValue)
                 {
-                    response.IsSuccess = false;
-                    response.Message = "目标文件夹不存在";
-                    return response;
+                    targetFolder = await _fileRepository.GetByIdAsync(request.NewParentFolderId.Value, cancellationToken);
+                    if (targetFolder == null || targetFolder.IsFolder != 1 || targetFolder.IsDel == (int)FileStatsType.Del)
+                    {
+                        response.IsSuccess = false;
+                        response.Message = "目标文件夹不存在";
+                        return response;
+                    }
                 }
 
                 // 3. 检查不能移动到自身或子文件夹
-                if (request.FileId == request.NewParentFolderId)
+                if (request.NewParentFolderId.HasValue && request.FileId == request.NewParentFolderId.Value)
                 {
                     response.IsSuccess = false;
                     response.Message = "不能移动到自身";
                     return response;
                 }
 
-                if (file.IsFolder == 1)
+                if (file.ParentFolderId == request.NewParentFolderId)
+                {
+                    response.IsSuccess = false;
+                    response.Message = "文件已在目标位置";
+                    return response;
+                }
+
+                if (file.IsFolder == 1 && targetFolder != null)
                 {
                     // 检查目标文件夹是否是当前文件夹的子文件夹
-                    if (targetFolder.Idpath.StartsWith(file.Idpath + "/") || targetFolder.Idpath == file.Idpath)
+                    if (targetFolder.Idpath.StartsWith(file.Idpath + "/", StringComparison.Ordinal) || targetFolder.Idpath == file.Idpath)
                     {
                         response.IsSuccess = false;
                         response.Message = "不能移动到子文件夹中";
@@ -84,27 +95,17 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
                 }
 
                 // 5. 更新父级 ID
-                long? oldParentId = file.ParentFolderId;
                 file.ParentFolderId = request.NewParentFolderId;
 
                 // 6. 更新路径
+                var targetPath = targetFolder?.Path;
+                var targetIdPath = targetFolder?.Idpath;
+                file.Path = BuildPath(targetPath, file.LeafName);
+                file.Idpath = BuildIdPath(targetIdPath, file.Id);
+
                 if (file.IsFolder == 1)
                 {
-                    // 文件夹：更新自身路径和所有子项路径
-                    file.Path = targetFolder.Path + "/" + file.LeafName;
-                    file.Idpath = targetFolder.Idpath + "/" + file.Id;
-
-                    await UpdateChildrenPathRecursive(file.Id, file.Path, file.Idpath);
-                }
-                else
-                {
-                    // 文件：只更新路径中的父级部分
-                    var pathParts = file.Path?.Split('/').ToList() ?? new List<string>();
-                    if (pathParts.Count > 0)
-                    {
-                        pathParts[pathParts.Count - 1] = file.LeafName;
-                        file.Path = targetFolder.Path + "/" + file.LeafName;
-                    }
+                    await UpdateChildrenPathRecursive(file.Id, file.Path, file.Idpath, cancellationToken);
                 }
 
                 file.UpdatedDate = DateTime.Now;
@@ -126,24 +127,44 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.CommandHandlers.File
         /// <summary>
         /// 递归更新子文件夹的路径
         /// </summary>
-        private async Task UpdateChildrenPathRecursive(long folderId, string parentPath, string parentIdPath)
+        private async Task UpdateChildrenPathRecursive(long folderId, string parentPath, string parentIdPath, CancellationToken cancellationToken)
         {
             var children = await _fileRepository.WhereAsync(a =>
                 a.ParentFolderId == folderId && a.IsDel == (int)FileStatsType.NoDel);
 
             foreach (var child in children)
             {
+                child.Path = BuildPath(parentPath, child.LeafName);
+                child.Idpath = BuildIdPath(parentIdPath, child.Id);
+                child.UpdatedDate = DateTime.Now;
+                await _fileRepository.UpdateAsync(child, cancellationToken);
+
                 if (child.IsFolder == 1)
                 {
-                    // 更新子文件夹路径
-                    child.Path = parentPath + "/" + child.LeafName;
-                    child.Idpath = parentIdPath + "/" + child.Id;
-                    await _fileRepository.UpdateAsync(child);
-
                     // 递归更新孙文件夹
-                    await UpdateChildrenPathRecursive(child.Id, child.Path, child.Idpath);
+                    await UpdateChildrenPathRecursive(child.Id, child.Path, child.Idpath, cancellationToken);
                 }
             }
+        }
+
+        private static string BuildPath(string? parentPath, string leafName)
+        {
+            if (string.IsNullOrWhiteSpace(parentPath) || parentPath == "/")
+            {
+                return "/" + leafName;
+            }
+
+            return parentPath.TrimEnd('/') + "/" + leafName;
+        }
+
+        private static string BuildIdPath(string? parentIdPath, long id)
+        {
+            if (string.IsNullOrWhiteSpace(parentIdPath))
+            {
+                return "/" + id;
+            }
+
+            return parentIdPath.TrimEnd('/') + "/" + id;
         }
     }
 }

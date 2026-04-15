@@ -1,4 +1,5 @@
 using Ptcent.Cloud.Drive.Application.Interfaces;
+using Ptcent.Cloud.Drive.Application.Options;
 using Ptcent.Cloud.Drive.Application.Services;
 using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Infrastructure.Repositories;
@@ -17,7 +18,11 @@ namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
             // 注册仓储
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IFileRepository, FileRepository>();
+            services.AddScoped<IShareRepository, ShareRepository>();
+            services.AddScoped<ICollectionRepository, CollectionRepository>();
+            services.AddScoped<IOperationLogRepository, OperationLogRepository>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.Configure<RecycleBinCleanupOptions>(configuration.GetSection("RecycleBinCleanup"));
 
             // 注册缓存服务
             var redisConfig = configuration.GetSection("Redis").Get<RedisOptions>()
@@ -47,6 +52,8 @@ namespace Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection
             services.AddScoped<IJwtService, JwtService>();
             services.AddScoped<IPasswordHasher, PasswordHasher>();
             services.AddScoped<IFileHashService, FileHashService>();
+            services.AddScoped<IRecycleBinCleanupService, RecycleBinCleanupService>();
+            services.AddScoped<IStorageStatsService, StorageStatsService>();
 
             return services;
         }

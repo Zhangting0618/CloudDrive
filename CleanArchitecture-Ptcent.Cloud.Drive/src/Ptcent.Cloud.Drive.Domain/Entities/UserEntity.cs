@@ -41,6 +41,11 @@ namespace Ptcent.Cloud.Drive.Domain.Entities
         public int? IsDel { get; set; }
 
         /// <summary>
+        /// 用户类型 0-管理员 1-普通用户
+        /// </summary>
+        public int? UserType { get; set; }
+
+        /// <summary>
         /// 头像地址
         /// </summary>
         public string? ImageUrl { get; set; }

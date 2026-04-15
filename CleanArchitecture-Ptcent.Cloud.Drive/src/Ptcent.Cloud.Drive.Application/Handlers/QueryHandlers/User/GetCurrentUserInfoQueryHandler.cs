@@ -45,7 +45,9 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.User
                     Email = user.Email,
                     Sex = user.Sex,
                     ImageUrl = user.ImageUrl,
-                    RegisterTime = user.RegisterTime
+                    RegisterTime = user.RegisterTime,
+                    UserType = user.UserType ?? (int)UserType.OrdinaryUsers,
+                    IsAdmin = (user.UserType ?? (int)UserType.OrdinaryUsers) == (int)UserType.Administrators
                 };
 
                 return response;

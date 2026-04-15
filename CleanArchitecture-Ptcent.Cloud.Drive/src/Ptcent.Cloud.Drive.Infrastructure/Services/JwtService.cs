@@ -24,7 +24,7 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Services
             _expiresDays = int.TryParse(configuration["Authentication:ExpiresDays"], out var days) ? days : 30;
         }
 
-        public string GenerateToken(string userId, string userName, string phone, string email)
+        public string GenerateToken(string userId, string userName, string phone, string email, int userType)
         {
             var claims = new List<Claim>
             {
@@ -32,6 +32,7 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Services
                 new(ClaimTypes.Name, userName),
                 new("Phone", phone),
                 new("Email", email),
+                new("UserType", userType.ToString()),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

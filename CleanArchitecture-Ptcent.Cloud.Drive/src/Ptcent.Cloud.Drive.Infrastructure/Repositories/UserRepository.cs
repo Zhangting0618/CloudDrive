@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Http;
 using Ptcent.Cloud.Drive.Application.Interfaces;
 using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
+using Ptcent.Cloud.Drive.Domain.Constants;
 using Ptcent.Cloud.Drive.Domain.Entities;
 using Ptcent.Cloud.Drive.Infrastructure.Persistence;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Ptcent.Cloud.Drive.Infrastructure.Repositories
 {
@@ -10,32 +14,57 @@ namespace Ptcent.Cloud.Drive.Infrastructure.Repositories
     /// </summary>
     public class UserRepository : Repository<UserEntity>, IUserRepository
     {
-        public UserRepository(AppDbContext context) : base(context)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public UserRepository(AppDbContext context, IHttpContextAccessor httpContextAccessor) : base(context)
         {
+            _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<long> UserId()
+        public Task<long> UserId()
         {
-            // TODO: 从当前用户获取
-            return await Task.FromResult(0L);
+            var value = GetClaimValue(ClaimTypes.NameIdentifier, ClaimConst.UserId, JwtRegisteredClaimNames.Sub);
+            if (!long.TryParse(value, out var userId))
+            {
+                throw new UnauthorizedAccessException("Current user id is unavailable.");
+            }
+
+            return Task.FromResult(userId);
         }
 
-        public async Task<string> Phone()
+        public Task<string> Phone()
         {
-            // TODO: 从当前用户获取
-            return await Task.FromResult(string.Empty);
+            return Task.FromResult(GetClaimValue("Phone", ClaimConst.Phone) ?? string.Empty);
         }
 
-        public async Task<string> UserName()
+        public Task<string> UserName()
         {
-            // TODO: 从当前用户获取
-            return await Task.FromResult(string.Empty);
+            return Task.FromResult(GetClaimValue(ClaimTypes.Name, ClaimConst.UserName) ?? string.Empty);
         }
 
-        public async Task<string> UserMail()
+        public Task<string> UserMail()
         {
-            // TODO: 从当前用户获取
-            return await Task.FromResult(string.Empty);
+            return Task.FromResult(GetClaimValue("Email", ClaimConst.UserMail) ?? string.Empty);
+        }
+
+        private string? GetClaimValue(params string[] claimTypes)
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user?.Identity?.IsAuthenticated != true)
+            {
+                return null;
+            }
+
+            foreach (var claimType in claimTypes)
+            {
+                var value = user.FindFirst(claimType)?.Value;
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
         }
     }
 }

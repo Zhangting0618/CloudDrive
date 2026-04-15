@@ -20,5 +20,7 @@ namespace Ptcent.Cloud.Drive.Application.Features.Users.Queries
         public int? Sex { get; set; }
         public string? ImageUrl { get; set; }
         public DateTime? RegisterTime { get; set; }
+        public int UserType { get; set; }
+        public bool IsAdmin { get; set; }
     }
 }

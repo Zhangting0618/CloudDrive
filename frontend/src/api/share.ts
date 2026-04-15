@@ -1,6 +1,5 @@
 import { api, ApiResponse } from './index'
 
-// 分享创建请求
 export interface CreateShareParams {
   fileId: number
   accessPassword?: string
@@ -8,7 +7,6 @@ export interface CreateShareParams {
   maxVisitCount?: number
 }
 
-// 分享结果
 export interface ShareResult {
   shareId: number
   shareCode: string
@@ -17,7 +15,6 @@ export interface ShareResult {
   hasPassword: boolean
 }
 
-// 分享信息
 export interface ShareInfo {
   fileId: number
   fileName: string
@@ -30,7 +27,10 @@ export interface ShareInfo {
   isValid: boolean
 }
 
-// 我的分享项
+export interface ShareAccessToken {
+  accessToken: string
+}
+
 export interface MyShareItem {
   shareId: number
   fileId: number
@@ -45,32 +45,53 @@ export interface MyShareItem {
   createTime: string
 }
 
-/**
- * 创建分享
- */
 export function createShare(data: CreateShareParams): Promise<ApiResponse<ShareResult>> {
-  return api.post('/file/share', data)
+  return api.post<ShareResult>('/file/share', data).then((res) => res.data)
 }
 
-/**
- * 获取分享信息
- */
 export function getShareInfo(shareCode: string): Promise<ApiResponse<ShareInfo>> {
-  return api.get(`/file/share/${shareCode}`)
+  return api.get<ShareInfo>(`/file/share/${shareCode}`).then((res) => res.data)
 }
 
-/**
- * 取消分享
- */
+export function verifyShareAccess(shareCode: string, password: string): Promise<ApiResponse<ShareAccessToken>> {
+  return api.post<ShareAccessToken>(`/file/share/${shareCode}/verify`, { password }).then((res) => res.data)
+}
+
 export function cancelShare(shareId: number): Promise<ApiResponse<boolean>> {
-  return api.delete(`/file/share/${shareId}`)
+  return api.delete<boolean>(`/file/share/${shareId}`).then((res) => res.data)
 }
 
-/**
- * 获取我的分享列表
- */
 export function getMyShares(pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<MyShareItem[]>> {
-  return api.get('/file/shares', {
-    params: { pageIndex, pageSize }
+  return api.get<MyShareItem[]>('/file/shares', {
+    params: { pageIndex, pageSize },
+  }).then((res) => res.data)
+}
+
+export function buildShareDownloadUrl(shareCode: string, accessToken?: string): string {
+  const params = new URLSearchParams()
+  if (accessToken) {
+    params.set('accessToken', accessToken)
+  }
+
+  const query = params.toString()
+  return `/cloudapi/file/share/${shareCode}/download${query ? `?${query}` : ''}`
+}
+
+export function formatDate(date?: string): string {
+  if (!date) return '-'
+
+  const d = new Date(date)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+
+  if (diff < 60_000) return '刚刚'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}分钟前`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}小时前`
+  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)}天前`
+
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   })
 }

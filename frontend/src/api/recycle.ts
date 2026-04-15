@@ -1,6 +1,6 @@
+import type { AxiosResponse } from 'axios'
 import { api, ApiResponse } from './index'
 
-// 回收站文件项
 export interface RecycleBinItem {
   id: number
   name: string
@@ -12,39 +12,24 @@ export interface RecycleBinItem {
   fileSizeStr?: string
 }
 
-/**
- * 获取回收站列表
- */
-export function getRecycleBinList(pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<RecycleBinItem[]>> {
-  return api.get('/file/recycle', {
-    params: { pageIndex, pageSize }
+export function getRecycleBinList(pageIndex: number = 1, pageSize: number = 10): Promise<AxiosResponse<ApiResponse<RecycleBinItem[]>>> {
+  return api.get<RecycleBinItem[]>('/file/recycle', {
+    params: { pageIndex, pageSize },
   })
 }
 
-/**
- * 还原文件
- */
 export function restoreFile(fileId: number): Promise<ApiResponse<boolean>> {
-  return api.post(`/file/recycle/${fileId}/restore`)
+  return api.post<boolean>(`/file/recycle/${fileId}/restore`).then((res) => res.data)
 }
 
-/**
- * 彻底删除文件
- */
 export function deleteFilePermanently(fileId: number): Promise<ApiResponse<boolean>> {
-  return api.delete(`/file/recycle/${fileId}`)
+  return api.delete<boolean>(`/file/recycle/${fileId}`).then((res) => res.data)
 }
 
-/**
- * 清空回收站
- */
 export function clearRecycleBin(): Promise<ApiResponse<boolean>> {
-  return api.delete('/file/recycle')
+  return api.delete<boolean>('/file/recycle').then((res) => res.data)
 }
 
-/**
- * 格式化文件大小
- */
 export function formatFileSize(bytes?: number): string {
   if (!bytes || bytes === 0) return '0 B'
 
@@ -52,12 +37,9 @@ export function formatFileSize(bytes?: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
-/**
- * 格式化日期
- */
 export function formatDate(date?: string): string {
   if (!date) return '-'
 
@@ -65,27 +47,11 @@ export function formatDate(date?: string): string {
   const now = new Date()
   const diff = now.getTime() - d.getTime()
 
-  // 1 分钟内
-  if (diff < 60000) {
-    return '刚刚'
-  }
+  if (diff < 60_000) return '刚刚'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}分钟前`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}小时前`
+  if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)}天前`
 
-  // 1 小时内
-  if (diff < 3600000) {
-    return `${Math.floor(diff / 60000)}分钟前`
-  }
-
-  // 24 小时内
-  if (diff < 86400000) {
-    return `${Math.floor(diff / 3600000)}小时前`
-  }
-
-  // 7 天内
-  if (diff < 604800000) {
-    return `${Math.floor(diff / 86400000)}天前`
-  }
-
-  // 超过 7 天显示具体日期
   return d.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',

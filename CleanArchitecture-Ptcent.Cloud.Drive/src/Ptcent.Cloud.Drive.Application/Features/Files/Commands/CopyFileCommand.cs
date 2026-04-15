@@ -4,10 +4,10 @@ using Ptcent.Cloud.Drive.Application.Contracts.Responses;
 namespace Ptcent.Cloud.Drive.Application.Features.Files.Commands
 {
     /// <summary>
-    /// 移动文件命令
+    /// 复制文件/文件夹命令
     /// </summary>
-    public record MoveFileCommand(
+    public record CopyFileCommand(
         long FileId,
-        long? NewParentFolderId
+        long? TargetParentFolderId
     ) : IRequest<ResponseMessageDto<bool>>;
 }

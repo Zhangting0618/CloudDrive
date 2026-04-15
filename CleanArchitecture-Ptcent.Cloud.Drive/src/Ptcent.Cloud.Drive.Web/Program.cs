@@ -1,6 +1,7 @@
 using Ptcent.Cloud.Drive.Web.Extensions.ServiceCollection;
 using Ptcent.Cloud.Drive.Application.MappingProfiles;
 using Ptcent.Cloud.Drive.Web.Middleware;
+using Ptcent.Cloud.Drive.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,7 @@ builder.Services.AddAutoMapper(typeof(AutoMapperConfig).Assembly);
 // ================= Infrastructure 层 =================
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddHostedService<RecycleBinCleanupHostedService>();
 
 // ================= Web API =================
 builder.Services.AddWebApi();
@@ -45,6 +47,7 @@ app.UseSwaggerPipeline();
 app.UseCors("AllowCors");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<OperationLogMiddleware>();
 app.UseResponseCompression();
 app.MapControllers();
 

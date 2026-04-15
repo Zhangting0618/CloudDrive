@@ -6,6 +6,11 @@ using Ptcent.Cloud.Drive.Application.Dto.ReponseModels;
 using Ptcent.Cloud.Drive.Application.Dto.RequestModels;
 using Ptcent.Cloud.Drive.Application.Features.Files.Commands;
 using Ptcent.Cloud.Drive.Application.Features.Files.Queries;
+using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
+using Ptcent.Cloud.Drive.Application.Services;
+using Ptcent.Cloud.Drive.Domain.Constants;
+using Ptcent.Cloud.Drive.Domain.Entities;
+using System.Security.Cryptography;
 
 namespace Ptcent.Cloud.Drive.Web.Controllers
 {
@@ -18,10 +23,18 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
     public class FileController : BaseController
     {
         private readonly IMediator _mediator;
+        private readonly IShareRepository _shareRepository;
+        private readonly ICacheService _cacheService;
 
-        public FileController(IMediator mediator, IConfiguration config) : base(config)
+        public FileController(
+            IMediator mediator,
+            IConfiguration config,
+            IShareRepository shareRepository,
+            ICacheService cacheService) : base(config)
         {
             _mediator = mediator;
+            _shareRepository = shareRepository;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -63,7 +76,7 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         }
 
         /// <summary>
-        /// 删除文件（软删除）
+        /// 删除文件
         /// </summary>
         [HttpDelete("{fileId}")]
         public async Task<ActionResult<ResponseMessageDto<bool>>> DeleteFile(long fileId)
@@ -96,7 +109,18 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         }
 
         /// <summary>
-        /// 获取文件预览 URL（前端预览）
+        /// 复制文件
+        /// </summary>
+        [HttpPost("copy")]
+        public async Task<ActionResult<ResponseMessageDto<bool>>> CopyFile([FromBody] CopyFileRequest request)
+        {
+            var command = new CopyFileCommand(request.FileId, request.TargetParentFolderId);
+            var result = await _mediator.Send(command);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 获取文件预览内容
         /// </summary>
         [HttpGet("{fileId}/preview")]
         public async Task<IActionResult> GetPreviewUrl(long fileId)
@@ -117,7 +141,7 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
                 return File(fileStream, contentType, fileName);
             }
 
-            return BadRequest(new { message = "该文件类型不支持在线预览", fileName, fileType = contentType });
+            return BadRequest(new { message = "This file type is not supported for online preview.", fileName, fileType = contentType });
         }
 
         /// <summary>
@@ -176,7 +200,7 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         }
 
         /// <summary>
-        /// 获取分享信息（公开接口，用于分享页面）
+        /// 获取分享信息
         /// </summary>
         [HttpGet("share/{shareCode}")]
         [AllowAnonymous]
@@ -185,6 +209,91 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
             var query = new GetShareInfoQuery(shareCode);
             var result = await _mediator.Send(query);
             return Ok(result);
+        }
+
+        /// <summary>
+        /// 校验分享密码并发放访问令牌
+        /// </summary>
+        [HttpPost("share/{shareCode}/verify")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ResponseMessageDto<ShareAccessTokenDto>>> VerifyShareAccess(string shareCode, [FromBody] VerifySharePasswordRequest request)
+        {
+            var share = await GetActiveShareAsync(shareCode);
+            if (share == null)
+            {
+                return Ok(new ResponseMessageDto<ShareAccessTokenDto>
+                {
+                    IsSuccess = false,
+                    Message = "Share is unavailable."
+                });
+            }
+
+            if (!string.IsNullOrEmpty(share.AccessPassword))
+            {
+                if (string.IsNullOrWhiteSpace(request.Password) ||
+                    !string.Equals(share.AccessPassword, request.Password, StringComparison.Ordinal))
+                {
+                    return Ok(new ResponseMessageDto<ShareAccessTokenDto>
+                    {
+                        IsSuccess = false,
+                        Message = "Invalid share password."
+                    });
+                }
+            }
+
+            var accessToken = await CreateShareAccessTokenAsync(shareCode, share.ExpireTime);
+            return Ok(new ResponseMessageDto<ShareAccessTokenDto>
+            {
+                IsSuccess = true,
+                Data = new ShareAccessTokenDto { AccessToken = accessToken },
+                Message = "Verification succeeded."
+            });
+        }
+
+        /// <summary>
+        /// 公开下载分享文件
+        /// </summary>
+        [HttpGet("share/{shareCode}/download")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DownloadSharedFile(string shareCode, [FromQuery] string? accessToken)
+        {
+            var share = await GetActiveShareAsync(shareCode);
+            if (share == null)
+            {
+                return BadRequest(new ResponseMessageDto<bool> { IsSuccess = false, Message = "Share is unavailable." });
+            }
+
+            if (share.MaxVisitCount > 0 && share.VisitCount >= share.MaxVisitCount)
+            {
+                return BadRequest(new ResponseMessageDto<bool> { IsSuccess = false, Message = "Share visit limit reached." });
+            }
+
+            if (!string.IsNullOrEmpty(share.AccessPassword))
+            {
+                var isValid = await ValidateShareAccessTokenAsync(shareCode, accessToken);
+                if (!isValid)
+                {
+                    return Unauthorized(new ResponseMessageDto<bool> { IsSuccess = false, Message = "Share access token is invalid." });
+                }
+            }
+
+            var result = await _mediator.Send(new DownLoadFileRequestDto
+            {
+                FileIds = new[] { share.FileId }
+            });
+
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Data.filePath) || !System.IO.File.Exists(result.Data.filePath))
+            {
+                return BadRequest(result);
+            }
+
+            share.VisitCount += 1;
+            share.UpdateTime = DateTime.Now;
+            await _shareRepository.UpdateAsync(share);
+
+            var fileName = result.Data.fileName;
+            var contentType = GetContentType(Path.GetExtension(fileName));
+            return PhysicalFile(result.Data.filePath, contentType, fileName);
         }
 
         /// <summary>
@@ -248,9 +357,69 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         [HttpGet("collection/check/{fileId}")]
         public async Task<ActionResult<ResponseMessageDto<bool>>> CheckCollection(long fileId)
         {
-            // 简单实现，实际应该查询数据库
             var result = new ResponseMessageDto<bool> { IsSuccess = true, Data = false };
             return Ok(result);
+        }
+
+        private async Task<ShareEntity?> GetActiveShareAsync(string shareCode)
+        {
+            var share = await _shareRepository.GetByShareCodeAsync(shareCode);
+            if (share == null || share.IsValid != 1)
+            {
+                return null;
+            }
+
+            if (share.ExpireTime.HasValue && share.ExpireTime.Value <= DateTime.Now)
+            {
+                return null;
+            }
+
+            return share;
+        }
+
+        private async Task<string> CreateShareAccessTokenAsync(string shareCode, DateTime? expireTime)
+        {
+            var accessToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+            var cacheKey = string.Format(CacheKeys.ShareAccessToken, shareCode, accessToken);
+            var expiration = CacheExpiration.ShareAccessToken;
+
+            if (expireTime.HasValue)
+            {
+                var remaining = expireTime.Value - DateTime.Now;
+                if (remaining > TimeSpan.Zero && remaining < expiration)
+                {
+                    expiration = remaining;
+                }
+            }
+
+            await _cacheService.SetAsync(cacheKey, true, expiration);
+            return accessToken;
+        }
+
+        private async Task<bool> ValidateShareAccessTokenAsync(string shareCode, string? accessToken)
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return false;
+            }
+
+            var cacheKey = string.Format(CacheKeys.ShareAccessToken, shareCode, accessToken);
+            return await _cacheService.ExistsAsync(cacheKey);
+        }
+
+        private static string GetContentType(string? extension)
+        {
+            return extension?.ToLowerInvariant() switch
+            {
+                ".zip" => "application/zip",
+                ".pdf" => "application/pdf",
+                ".txt" => "text/plain",
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                ".mp4" => "video/mp4",
+                _ => "application/octet-stream"
+            };
         }
     }
 
@@ -262,6 +431,16 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
         public string? AccessPassword { get; set; }
         public int? ExpireDays { get; set; }
         public int? MaxVisitCount { get; set; }
+    }
+
+    public class VerifySharePasswordRequest
+    {
+        public string? Password { get; set; }
+    }
+
+    public class ShareAccessTokenDto
+    {
+        public string AccessToken { get; set; } = string.Empty;
     }
 
     public class CollectionRequest
@@ -277,7 +456,13 @@ namespace Ptcent.Cloud.Drive.Web.Controllers
     public class MoveFileRequest
     {
         public long FileId { get; set; }
-        public long NewParentFolderId { get; set; }
+        public long? NewParentFolderId { get; set; }
+    }
+
+    public class CopyFileRequest
+    {
+        public long FileId { get; set; }
+        public long? TargetParentFolderId { get; set; }
     }
 
     #endregion

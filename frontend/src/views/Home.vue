@@ -1,6 +1,5 @@
 <template>
   <div class="home-container">
-    <!-- 侧边栏 -->
     <aside class="sidebar">
       <div class="logo">
         <el-icon :size="24"><FolderOpened /></el-icon>
@@ -24,6 +23,18 @@
           <el-icon><Link /></el-icon>
           <span>我的分享</span>
         </router-link>
+        <router-link to="/stats" class="nav-item" active-class="active">
+          <el-icon><PieChart /></el-icon>
+          <span>存储统计</span>
+        </router-link>
+        <router-link to="/logs" class="nav-item" active-class="active">
+          <el-icon><DocumentCopy /></el-icon>
+          <span>操作日志</span>
+        </router-link>
+        <router-link v-if="userStore.userInfo?.isAdmin" to="/users" class="nav-item" active-class="active">
+          <el-icon><User /></el-icon>
+          <span>用户管理</span>
+        </router-link>
       </nav>
 
       <div class="user-info">
@@ -43,7 +54,6 @@
       </div>
     </aside>
 
-    <!-- 主内容区 -->
     <main class="main-content">
       <router-view />
     </main>
@@ -62,20 +72,31 @@ import {
   UserFilled,
   ArrowDown,
   Link,
+  PieChart,
+  DocumentCopy,
+  User,
 } from '@element-plus/icons-vue'
+import { onMounted } from 'vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const handleCommand = (command: string) => {
+const handleCommand = async (command: string) => {
   if (command === 'settings') {
     router.push('/settings')
-  } else if (command === 'logout') {
-    userStore.logoutAction()
+    return
+  }
+
+  if (command === 'logout') {
+    await userStore.logoutAction()
     ElMessage.success('已退出登录')
     router.push('/login')
   }
 }
+
+onMounted(() => {
+  userStore.refreshCurrentUser()
+})
 </script>
 
 <style scoped lang="scss">
@@ -150,7 +171,7 @@ const handleCommand = (command: string) => {
 
 .main-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   background: #f5f7fa;
 }
 </style>

@@ -5,7 +5,7 @@ namespace Ptcent.Cloud.Drive.Application.Services
     /// </summary>
     public interface IJwtService
     {
-        string GenerateToken(string userId, string userName, string phone, string email);
+        string GenerateToken(string userId, string userName, string phone, string email, int userType);
         string? ValidateToken(string token);
     }
 }

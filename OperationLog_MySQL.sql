@@ -1,0 +1,21 @@
+CREATE TABLE `OperationLog` (
+  `Id` BIGINT NOT NULL COMMENT '主键',
+  `UserId` BIGINT NULL COMMENT '用户ID',
+  `UserName` VARCHAR(100) NULL COMMENT '用户名',
+  `Phone` VARCHAR(32) NULL COMMENT '手机号',
+  `Method` VARCHAR(16) NOT NULL COMMENT 'HTTP方法',
+  `Path` VARCHAR(255) NOT NULL COMMENT '请求路径',
+  `ActionName` VARCHAR(255) NULL COMMENT '操作名称',
+  `IpAddress` VARCHAR(64) NULL COMMENT 'IP地址',
+  `UserAgent` VARCHAR(512) NULL COMMENT '用户代理',
+  `RequestQuery` VARCHAR(1000) NULL COMMENT '请求参数',
+  `StatusCode` INT NOT NULL COMMENT '状态码',
+  `IsSuccess` TINYINT(1) NOT NULL COMMENT '是否成功',
+  `DurationMs` BIGINT NOT NULL COMMENT '耗时毫秒',
+  `ErrorMessage` VARCHAR(1000) NULL COMMENT '错误信息',
+  `CreatedTime` DATETIME NOT NULL COMMENT '创建时间',
+  PRIMARY KEY (`Id`),
+  KEY `IX_OperationLog_UserId_CreatedTime` (`UserId`, `CreatedTime`),
+  KEY `IX_OperationLog_CreatedTime` (`CreatedTime`),
+  KEY `IX_OperationLog_Path` (`Path`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';

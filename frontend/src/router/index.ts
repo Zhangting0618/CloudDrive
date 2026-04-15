@@ -17,49 +17,70 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/files',
-    name: 'Files',
-    component: () => import('@/views/Files.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/recycle',
-    name: 'RecycleBin',
-    component: () => import('@/views/RecycleBin.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/collection',
-    name: 'Collection',
-    component: () => import('@/views/Collection.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/share',
-    name: 'Share',
-    component: () => import('@/views/Share.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    redirect: '/files',
+    children: [
+      {
+        path: 'files',
+        name: 'Files',
+        component: () => import('@/views/Files.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'recycle',
+        name: 'RecycleBin',
+        component: () => import('@/views/RecycleBin.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'collection',
+        name: 'Collection',
+        component: () => import('@/views/Collection.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'share',
+        name: 'Share',
+        component: () => import('@/views/Share.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'logs',
+        name: 'OperationLogs',
+        component: () => import('@/views/OperationLogs.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'stats',
+        name: 'StorageStats',
+        component: () => import('@/views/StorageStats.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'users',
+        name: 'UserManagement',
+        component: () => import('@/views/UserManagement.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'settings',
+        name: 'UserSettings',
+        component: () => import('@/views/UserSettings.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'preview/:fileId',
+        name: 'Preview',
+        component: () => import('@/views/Preview.vue'),
+        meta: { requiresAuth: true }
+      },
+    ]
   },
   {
     path: '/s/:shareCode',
     name: 'SharePublic',
     component: () => import('@/views/SharePublic.vue'),
     meta: { requiresAuth: false }
-  },
-  {
-    path: '/settings',
-    name: 'UserSettings',
-    component: () => import('@/views/UserSettings.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/preview/:fileId',
-    name: 'Preview',
-    component: () => import('@/views/Preview.vue'),
-    meta: { requiresAuth: true }
   },
   {
     path: '/:pathMatch(.*)*',

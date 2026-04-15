@@ -20,19 +20,22 @@ namespace Ptcent.Cloud.Drive.Application.Features.Files.Commands
         private readonly ICacheService _cacheService;
         private readonly IConfiguration _configuration;
         private readonly IFileHashService _fileHashService;
+        private readonly IUserRepository _userRepository;
 
         public UploadFileCommandHandler(
             IFileRepository fileRepository,
             IIdGeneratorService idGenerator,
             ICacheService cacheService,
             IConfiguration configuration,
-            IFileHashService fileHashService)
+            IFileHashService fileHashService,
+            IUserRepository userRepository)
         {
             _fileRepository = fileRepository;
             _idGenerator = idGenerator;
             _cacheService = cacheService;
             _configuration = configuration;
             _fileHashService = fileHashService;
+            _userRepository = userRepository;
         }
 
         public async Task<ResponseMessageDto<UploadFileResult>> Handle(UploadFileCommand request, CancellationToken cancellationToken)
@@ -117,6 +120,16 @@ namespace Ptcent.Cloud.Drive.Application.Features.Files.Commands
                 }
 
                 // 创建文件记录
+                long createdBy = 0;
+                try
+                {
+                    createdBy = await _userRepository.UserId();
+                }
+                catch
+                {
+                    // 保持兼容，无法识别用户时回落到历史默认值
+                }
+
                 var fileEntity = new FileEntity
                 {
                     Id = fileId,
@@ -130,8 +143,8 @@ namespace Ptcent.Cloud.Drive.Application.Features.Files.Commands
                     IsDel = 0,
                     CreatedDate = DateTime.UtcNow,
                     UpdatedDate = DateTime.UtcNow,
-                    CreatedBy = 0, // TODO: 从当前用户获取
-                    UpdatedBy = 0,
+                    CreatedBy = createdBy,
+                    UpdatedBy = createdBy,
                     VersionId = 1,
                     ItemHash = fileHash,
                     FileSize = request.File.Length,

@@ -61,7 +61,7 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
                         bool isSuccess = FileZipUtil.ZipFileDictory(tempCopyFile, zipPath);
                         if (isSuccess)
                         {
-                            response.Data = (filePath, zipFileName);
+                            response.Data = (zipPath, zipFileName);
                             return response;
                         }
                     }
@@ -103,7 +103,7 @@ namespace Ptcent.Cloud.Drive.Application.Handlers.QueryHandlers.File
                     bool isSuccess = FileZipUtil.ZipFileDictory(tempCopyFile, zipPath);
                     if (isSuccess)
                     {
-                        response.Data = (filePath, zipFileName);
+                        response.Data = (zipPath, zipFileName);
                         return response;
                     }
                 }

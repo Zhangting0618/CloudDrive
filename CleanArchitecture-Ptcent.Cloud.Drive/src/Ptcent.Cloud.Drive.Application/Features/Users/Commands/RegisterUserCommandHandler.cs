@@ -4,6 +4,7 @@ using Ptcent.Cloud.Drive.Application.Interfaces;
 using Ptcent.Cloud.Drive.Application.Interfaces.Persistence;
 using Ptcent.Cloud.Drive.Application.Services;
 using Ptcent.Cloud.Drive.Domain.Entities;
+using Ptcent.Cloud.Drive.Domain.Enum;
 
 namespace Ptcent.Cloud.Drive.Application.Features.Users.Commands
 {
@@ -47,6 +48,10 @@ namespace Ptcent.Cloud.Drive.Application.Features.Users.Commands
             // 创建用户实体
             var userId = _idGenerator.NewId();
             var (hashedPassword, salt) = _passwordHasher.HashPassword(request.Password, request.Phone);
+            var hasAdmin = await _userRepository.AnyAsync(
+                u => u.UserType == (int)UserType.Administrators,
+                cancellationToken
+            );
 
             var user = new UserEntity
             {
@@ -58,6 +63,7 @@ namespace Ptcent.Cloud.Drive.Application.Features.Users.Commands
                 Salt = salt,
                 Sex = request.Sex ?? 0,
                 IsDel = 0,
+                UserType = hasAdmin ? (int)UserType.OrdinaryUsers : (int)UserType.Administrators,
                 CreateDate = DateTime.UtcNow,
                 UpdateDate = DateTime.UtcNow,
                 CreateBy = userId,

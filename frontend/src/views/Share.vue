@@ -113,8 +113,8 @@ const loadShares = async () => {
   loading.value = true
   try {
     const res = await getMyShares(currentPage.value, pageSize.value)
-    shares.value = res.data?.data || []
-    total.value = res.data?.totalCount || 0
+    shares.value = res.data || []
+    total.value = res.totalCount || 0
   } catch (error: any) {
     ElMessage.error(error.message || '加载分享失败')
   } finally {

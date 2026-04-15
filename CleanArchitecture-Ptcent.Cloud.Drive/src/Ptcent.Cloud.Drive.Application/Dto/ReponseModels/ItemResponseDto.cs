@@ -19,6 +19,11 @@ namespace Ptcent.Cloud.Drive.Application.Dto.ReponseModels
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
+        /// 父级文件夹 Id
+        /// </summary>
+        public long? ParentFolderId { get; set; }
+
+        /// <summary>
         /// 扩展名
         /// </summary>
         public string? Extension { get; set; }
